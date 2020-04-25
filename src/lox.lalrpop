@@ -4,16 +4,28 @@ use crate::ast::*;
 grammar;
 
 pub Expr: Box<Expr> = {
-    <l:Expr> <o:ExprOp> <r:Factor> => Box::new(Expr::Binary(l, o, r)),
+    <l:Expr> <o:CompareOp> <r:Comparison> => Box::new(Expr::Binary(l, o, r)),
+    Comparison
+}
+
+CompareOp: BinaryOp = {
+    "<" => BinaryOp::Lt,
+    "<=" => BinaryOp::Le,
+    ">" => BinaryOp::Gt,
+    ">=" => BinaryOp::Ge,
+}
+
+pub Comparison: Box<Expr> = {
+    <l:Comparison> <o:AddOp> <r:Factor> => Box::new(Expr::Binary(l, o, r)),
     Factor,
 }
 
-ExprOp: BinaryOp = {
+AddOp: BinaryOp = {
     "+" => BinaryOp::Add,
     "-" => BinaryOp::Sub,
 }
 
-pub Factor: Box<Expr> = {
+Factor: Box<Expr> = {
     <l:Factor> <o:FactorOp> <r:Term> => Box::new(Expr::Binary(l, o, r)),
     Term,
 }
@@ -23,7 +35,7 @@ FactorOp: BinaryOp = {
     "/" => BinaryOp::Div,
 }
 
-pub Term: Box<Expr> = {
+Term: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
     Bool => Box::new(Expr::Boolean(<>)),
     "nil" => Box::new(Expr::Nil),

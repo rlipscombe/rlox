@@ -12,4 +12,9 @@ pub enum BinaryOp {
     Div,
     Add,
     Sub,
+
+    Lt,
+    Le,
+    Gt,
+    Ge,
 }

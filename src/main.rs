@@ -65,6 +65,34 @@ fn do_div<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     }
 }
 
+fn do_lt<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
+    match (lhs, rhs) {
+        (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l < r)),
+        _ => Err(Error::Runtime)
+    }
+}
+
+fn do_le<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
+    match (lhs, rhs) {
+        (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l <= r)),
+        _ => Err(Error::Runtime)
+    }
+}
+
+fn do_gt<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
+    match (lhs, rhs) {
+        (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l > r)),
+        _ => Err(Error::Runtime)
+    }
+}
+
+fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
+    match (lhs, rhs) {
+        (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l >= r)),
+        _ => Err(Error::Runtime)
+    }
+}
+
 fn evaluate<'s>(expr: Box<ast::Expr>) -> Result<Value, Error<'s>> {
     match *expr {
         ast::Expr::Nil => Ok(Value::Nil),
@@ -76,6 +104,10 @@ fn evaluate<'s>(expr: Box<ast::Expr>) -> Result<Value, Error<'s>> {
                 ast::BinaryOp::Sub => { do_sub(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Mul => { do_mul(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Div => { do_div(evaluate(l)?, evaluate(r)?) }
+                ast::BinaryOp::Lt => { do_lt(evaluate(l)?, evaluate(r)?) }
+                ast::BinaryOp::Le => { do_le(evaluate(l)?, evaluate(r)?) }
+                ast::BinaryOp::Gt => { do_gt(evaluate(l)?, evaluate(r)?) }
+                ast::BinaryOp::Ge => { do_ge(evaluate(l)?, evaluate(r)?) }
             }
         }
     }
@@ -138,4 +170,30 @@ fn div_precedence() {
 #[test]
 fn mul_nil() {
     assert!(evaluate_string("nil * nil").is_err());
+}
+
+#[test]
+fn cmp_lt() {
+    assert_eq!(evaluate_string("1 < 2"), Ok(Value::Boolean(true)));
+    assert_eq!(evaluate_string("2 < 1"), Ok(Value::Boolean(false)));
+}
+
+#[test]
+fn cmp_le() {
+    assert_eq!(evaluate_string("1 <= 2"), Ok(Value::Boolean(true)));
+    assert_eq!(evaluate_string("2 <= 2"), Ok(Value::Boolean(true)));
+    assert_eq!(evaluate_string("2 <= 1"), Ok(Value::Boolean(false)));
+}
+
+#[test]
+fn cmp_gt() {
+    assert_eq!(evaluate_string("2 > 1"), Ok(Value::Boolean(true)));
+    assert_eq!(evaluate_string("1 > 2"), Ok(Value::Boolean(false)));
+}
+
+#[test]
+fn cmp_ge() {
+    assert_eq!(evaluate_string("2 >= 1"), Ok(Value::Boolean(true)));
+    assert_eq!(evaluate_string("2 >= 2"), Ok(Value::Boolean(true)));
+    assert_eq!(evaluate_string("1 >= 2"), Ok(Value::Boolean(false)));
 }
