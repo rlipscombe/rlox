@@ -1,6 +1,8 @@
 #[derive(Debug)]
 pub enum Expr {
+    Nil,
     Number(f64),
+    Boolean(bool),
     Binary(Box<Expr>, BinaryOp, Box<Expr>),
 }
 

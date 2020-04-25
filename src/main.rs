@@ -1,26 +1,21 @@
 #[macro_use]
 extern crate lalrpop_util;
-
 lalrpop_mod!(pub lox);
 
 pub mod ast;
-use crate::lox::Token;
 
 fn main() {
-    let path = "<stdin>";
-    let source = "-1234 + 67 * 0.2 * 1.5 / 3";
-/*    let parser = lox::ExprParser::new();
-*/
+    println!("{:?}", evaluate_string("-123"));
 }
 
 #[test]
 fn literal_number() {
-    assert_eq!(Ok(123.0), evaluate_string("123"));
+    assert_eq!(Ok(Value::Number(123.0)), evaluate_string("123"));
 }
 
 #[test]
 fn paren_number() {
-    assert_eq!(Ok(123.0), evaluate_string("(123)"));
+    assert_eq!(Ok(Value::Number(123.0)), evaluate_string("(123)"));
 }
 
 #[test]
@@ -35,61 +30,112 @@ fn paren_empty() {
     assert!(parser.parse("()").is_err());
 }
 
-fn evaluate(expr: Box<ast::Expr>) -> f64 {
+#[derive(PartialEq, Debug)]
+enum Value {
+    Nil,
+    Number(f64),
+    Boolean(bool),
+}
+
+fn do_add<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
+    match (lhs, rhs) {
+        (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
+        _ => Err(Error::Runtime)
+    }
+}
+
+fn do_sub<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
+    match (lhs, rhs) {
+        (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l - r)),
+        _ => Err(Error::Runtime)
+    }
+}
+
+fn do_mul<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
+    match (lhs, rhs) {
+        (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l * r)),
+        _ => Err(Error::Runtime)
+    }
+}
+
+fn do_div<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
+    match (lhs, rhs) {
+        (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l / r)),
+        _ => Err(Error::Runtime)
+    }
+}
+
+fn evaluate<'s>(expr: Box<ast::Expr>) -> Result<Value, Error<'s>> {
     match *expr {
-        ast::Expr::Number(n) => n,
+        ast::Expr::Nil => Ok(Value::Nil),
+        ast::Expr::Number(n) => Ok(Value::Number(n)),
+        ast::Expr::Boolean(b) => Ok(Value::Boolean(b)),
         ast::Expr::Binary(l, o, r) => {
             match o {
-                ast::BinaryOp::Add => { evaluate(l) + evaluate(r) }
-                ast::BinaryOp::Sub => { evaluate(l) - evaluate(r) }
-                ast::BinaryOp::Mul => { evaluate(l) * evaluate(r) }
-                ast::BinaryOp::Div => { evaluate(l) / evaluate(r) }
+                ast::BinaryOp::Add => { do_add(evaluate(l)?, evaluate(r)?) }
+                ast::BinaryOp::Sub => { do_sub(evaluate(l)?, evaluate(r)?) }
+                ast::BinaryOp::Mul => { do_mul(evaluate(l)?, evaluate(r)?) }
+                ast::BinaryOp::Div => { do_div(evaluate(l)?, evaluate(r)?) }
             }
         }
     }
 }
 
-#[cfg(test)]
-type Error<'s> = lalrpop_util::ParseError<usize, lox::Token<'s>, &'s str>;
+type ParseError<'s> = lalrpop_util::ParseError<usize, lox::Token<'s>, &'s str>;
 
-#[cfg(test)]
-fn evaluate_string(source: &str) -> Result<f64, Error> {
+#[derive(Debug, PartialEq)]
+enum Error<'s> {
+    Parse(ParseError<'s>),
+    Runtime
+}
+
+
+fn parse_string(source: &str) -> Result<Box<ast::Expr>, Error> {
     let parser = lox::ExprParser::new();
-    let result: Result<Box<ast::Expr>, Error> = parser.parse(source);
-    result.map(evaluate)
+    parser.parse(source).map_err(|e| { Error::Parse(e) })
+}
+
+fn evaluate_string(source: &str) -> Result<Value, Error> {
+    let result = parse_string(source);
+    result.and_then(evaluate)
 }
 
 #[test]
 fn negate_number() {
-    assert_eq!(Ok(-123.0), evaluate_string("-123"));
+    assert_eq!(Ok(Value::Number(-123.0)), evaluate_string("-123"));
 }
 
 #[test]
 fn simple_addition() {
-    assert_eq!(Ok(1234.0 + 67.0), evaluate_string("1234 + 67"));
+    assert_eq!(Ok(Value::Number(1234.0 + 67.0)), evaluate_string("1234 + 67"));
 }
 
 #[test]
 fn repeated_addition() {
-    assert_eq!(Ok(6.0), evaluate_string("1 + 2 + 3"));
+    assert_eq!(Ok(Value::Number(6.0)), evaluate_string("1 + 2 + 3"));
 }
 
 #[test]
 fn simple_subtraction() {
-    assert_eq!(Ok(1200.0), evaluate_string("1234 - 34"));
+    assert_eq!(Ok(Value::Number(1200.0)), evaluate_string("1234 - 34"));
 }
 
 #[test]
 fn repeated_subtraction() {
-    assert_eq!(Ok(4.0), evaluate_string("9 - 4 - 1"));
+    assert_eq!(Ok(Value::Number(4.0)), evaluate_string("9 - 4 - 1"));
 }
 
 #[test]
 fn mul_div() {
-    assert_eq!(Ok(12.0), evaluate_string("9 * 4 / 3"));
+    assert_eq!(Ok(Value::Number(12.0)), evaluate_string("9 * 4 / 3"));
 }
 
 #[test]
 fn div_precedence() {
-    assert_eq!(Ok(18.5), evaluate_string("17 - 5 / 2 + 4"));
+    assert_eq!(Ok(Value::Number(18.5)), evaluate_string("17 - 5 / 2 + 4"));
+}
+
+#[test]
+fn mul_nil() {
+    assert!(evaluate_string("nil * nil").is_err());
 }
