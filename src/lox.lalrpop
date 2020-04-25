@@ -41,6 +41,7 @@ Term: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
     Bool => Box::new(Expr::Boolean(<>)),
     "nil" => Box::new(Expr::Nil),
+    String => Box::new(Expr::String(<>)),
     "(" <Expr> ")",
 };
 
@@ -49,6 +50,9 @@ Bool: bool = {
     "true" => true,
     "false" => false,
 }
+
+// TODO: Support escape characters.
+String: String = <s:r#""[^"]*""#> => (s[1..s.len()-1]).to_string();
 
 // Helpers
 UnaryOperator<Operator, Right, Next>: Box<Expr> = {

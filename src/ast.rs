@@ -3,6 +3,7 @@ pub enum Expr {
     Nil,
     Number(f64),
     Boolean(bool),
+    String(String),
     Unary(UnaryOp, Box<Expr>),
     Binary(Box<Expr>, BinaryOp, Box<Expr>),
 }

@@ -13,6 +13,7 @@ enum Value {
     Nil,
     Number(f64),
     Boolean(bool),
+    String(String),
 }
 
 fn do_add<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
@@ -97,6 +98,7 @@ fn evaluate<'s>(expr: Box<ast::Expr>) -> Result<Value, Error<'s>> {
         ast::Expr::Nil => Ok(Value::Nil),
         ast::Expr::Number(n) => Ok(Value::Number(n)),
         ast::Expr::Boolean(b) => Ok(Value::Boolean(b)),
+        ast::Expr::String(s) => Ok(Value::String(s)),
         ast::Expr::Unary(o, r) => match o {
             ast::UnaryOp::Invert => match evaluate(r)? {
                 Value::Boolean(b) => Ok(Value::Boolean(!b)),
@@ -255,4 +257,14 @@ fn negate_bool() {
 fn double_negate_bool() {
     assert_eq!(evaluate_string("!!true"), Ok(Value::Boolean(true)));
     assert_eq!(evaluate_string("!!(1 == 2)"), Ok(Value::Boolean(false)));
+}
+
+#[test]
+fn string_literal() {
+    assert_eq!(evaluate_string(r#""Hello World!""#), Ok(Value::String("Hello World!".to_string())));
+}
+
+#[test]
+fn empty_string_literal() {
+    assert_eq!(evaluate_string(r#""""#), Ok(Value::String("".to_string())));
 }
