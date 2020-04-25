@@ -72,6 +72,20 @@ fn do_mod<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     }
 }
 
+fn do_eq<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
+    match (lhs, rhs) {
+        (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l == r)),
+        _ => Err(Error::Runtime)
+    }
+}
+
+fn do_ne<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
+    match (lhs, rhs) {
+        (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l != r)),
+        _ => Err(Error::Runtime)
+    }
+}
+
 fn do_lt<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l < r)),
@@ -112,6 +126,8 @@ fn evaluate<'s>(expr: Box<ast::Expr>) -> Result<Value, Error<'s>> {
                 ast::BinaryOp::Mul => { do_mul(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Div => { do_div(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Mod => { do_mod(evaluate(l)?, evaluate(r)?) }
+                ast::BinaryOp::Eq => { do_eq(evaluate(l)?, evaluate(r)?) }
+                ast::BinaryOp::Ne => { do_ne(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Lt => { do_lt(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Le => { do_le(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Gt => { do_gt(evaluate(l)?, evaluate(r)?) }
@@ -204,4 +220,11 @@ fn cmp_ge() {
     assert_eq!(evaluate_string("2 >= 1"), Ok(Value::Boolean(true)));
     assert_eq!(evaluate_string("2 >= 2"), Ok(Value::Boolean(true)));
     assert_eq!(evaluate_string("1 >= 2"), Ok(Value::Boolean(false)));
+}
+
+#[test]
+fn cmp_eq() {
+    assert_eq!(evaluate_string("2 != 1"), Ok(Value::Boolean(true)));
+    assert_eq!(evaluate_string("2 == 2"), Ok(Value::Boolean(true)));
+    assert_eq!(evaluate_string("(1 + 1) == 2"), Ok(Value::Boolean(true)));
 }

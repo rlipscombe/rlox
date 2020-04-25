@@ -15,6 +15,9 @@ pub enum BinaryOp {
     Add,
     Sub,
 
+    Eq,
+    Ne,
+
     Lt,
     Le,
     Gt,

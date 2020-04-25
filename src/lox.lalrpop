@@ -3,9 +3,15 @@ use crate::ast::*;
 
 grammar;
 
-pub Expr = BinaryOperator<Expr, CompareOp, Comparison>;
+pub Expr = BinaryOperator<Expr, EqualityOp, Equality>;
+Equality = BinaryOperator<Equality, CompareOp, Comparison>;
 Comparison = BinaryOperator<Comparison, AddOp, Factor>;
 Factor = BinaryOperator<Factor, MulOp, Term>;
+
+EqualityOp: BinaryOp = {
+    "==" => BinaryOp::Eq,
+    "!=" => BinaryOp::Ne,
+}
 
 CompareOp: BinaryOp = {
     "<" => BinaryOp::Lt,
