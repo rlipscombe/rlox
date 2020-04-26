@@ -7,6 +7,7 @@ use std::collections::HashMap;
 pub mod ast;
 
 fn main() {
+    let path = "<verbatim>";
     let source = r#"
     var greeting = "Hello";
     var recipient = "World!";
@@ -15,17 +16,57 @@ fn main() {
     var r = 2;
     var area = PI * r * r;
     print area;
+    var volume = PI * r * r * height;
+    print volume;
     "#;
     let mut environment = Environment::new();
     match interpret_source(source, &mut environment) {
         Ok(_) => {}
-        Err(e) => {
-            eprintln!("{:?}", e);
-        }
+        Err(e) => match e {
+            Error::Runtime(RuntimeError::IdentifierNotFound { name, location }) => {
+                if let Some((line_num, line, offset)) = get_source_at_location(source, location) {
+                    eprintln!(
+                        "{}: identifier '{}' not found at line {}:{}:{}",
+                        path, name, line_num, offset.0, offset.1
+                    );
+                    eprintln!("{}", line);
+                    eprintln!("{:>offset$}{:^>length$}", "", "^", offset = offset.0 - 1, length = offset.1 - offset.0 + 1);
+                } else {
+                    eprintln!("{}: identifier '{}' not found", path, name);
+                }
+            }
+            _ => {
+                eprintln!("{:?}", e);
+            }
+        },
     };
 }
 
-fn interpret_source<'s>(source: &'s str, environment: &'s mut Environment) -> Result<(), Error<'s>> {
+fn get_source_at_location(
+    source: &str,
+    location: (usize, usize),
+) -> Option<(usize, &str, (usize, usize))> {
+    let mut lines: Vec<(usize, &str)> = Vec::new();
+    let mut offset = 0;
+    for s in source.split('\n') {
+        lines.push((offset, s));
+        offset += s.len() + 1;
+    }
+
+    let mut line = 1;
+    for (x, s) in lines {
+        if x + s.len() > location.0 {
+            return Some((line, s, (location.0 - x + 1, location.1 - x)));
+        }
+        line += 1;
+    }
+    None
+}
+
+fn interpret_source<'s>(
+    source: &'s str,
+    environment: &'s mut Environment,
+) -> Result<(), Error<'s>> {
     let parser = lox::ProgramParser::new();
     let program = parser.parse(source).map_err(|e| Error::Parse(e))?;
     interpret_statements(program, environment)
@@ -176,7 +217,10 @@ fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     }
 }
 
-fn evaluate<'s, 'e>(expr: Box<ast::Expr>, environment: &'e Environment) -> Result<Value, Error<'s>> {
+fn evaluate<'s, 'e>(
+    expr: Box<ast::Expr>,
+    environment: &'e Environment,
+) -> Result<Value, Error<'s>> {
     match *expr {
         ast::Expr::Nil => Ok(Value::Nil),
         ast::Expr::Number(n) => Ok(Value::Number(n)),
@@ -205,9 +249,9 @@ fn evaluate<'s, 'e>(expr: Box<ast::Expr>, environment: &'e Environment) -> Resul
             ast::BinaryOp::Gt => do_gt(evaluate(l, environment)?, evaluate(r, environment)?),
             ast::BinaryOp::Ge => do_ge(evaluate(l, environment)?, evaluate(r, environment)?),
         },
-        ast::Expr::Var(i) => {
-            environment.get(&i).ok_or_else(|| Error::Runtime(RuntimeError::IdentifierNotFound))
-        }
+        ast::Expr::Var { name, location } => environment
+            .get(&name)
+            .ok_or_else(|| Error::Runtime(RuntimeError::IdentifierNotFound { name, location })),
     }
 }
 
@@ -222,7 +266,10 @@ enum Error<'s> {
 #[derive(Debug, PartialEq)]
 enum RuntimeError {
     TypeMismatch,
-    IdentifierNotFound,
+    IdentifierNotFound {
+        name: String,
+        location: (usize, usize),
+    },
 }
 
 fn parse_string(source: &str) -> Result<Box<ast::Expr>, Error> {

@@ -6,7 +6,7 @@ pub enum Expr {
     String(String),
     Unary(UnaryOp, Box<Expr>),
     Binary(Box<Expr>, BinaryOp, Box<Expr>),
-    Var(String),
+    Var{ name: String, location: (usize, usize) },
 }
 
 #[derive(Debug, PartialEq)]
