@@ -12,7 +12,15 @@ pub enum Expr {
     String(String),
     Unary(UnaryOp, Box<Expr>),
     Binary(Box<Expr>, BinaryOp, Box<Expr>),
-    Var{ name: String, location: Location },
+    Var {
+        name: String,
+        location: Location,
+    },
+    Assignment {
+        name: String,
+        rhs: Box<Expr>,
+        location: Location,
+    },
 }
 
 #[derive(Debug, PartialEq)]

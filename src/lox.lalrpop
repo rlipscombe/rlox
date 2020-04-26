@@ -24,7 +24,13 @@ pub Statement = { ExprStmt, PrintStmt, }
 ExprStmt: Stmt = <Expr> ";" => Stmt::Expr(Box::new(<>));
 PrintStmt: Stmt = "print" <Expr> ";" => Stmt::Print(Box::new(<>));
 
-pub Expr = Equality;
+pub Expr = Assignment;
+
+Assignment: Expr = {
+    <s:@L> <i:Identifier> <e:@L> "=" <a:Assignment> => Expr::Assignment { name: i.to_string(), rhs: Box::new(a), location: location(s, e) },
+    Equality
+}
+
 Equality = BinaryOperator<Equality, EqualityOp, Comparison>;
 Comparison = BinaryOperator<Comparison, ComparisonOp, Addition>;
 Addition = BinaryOperator<Addition, AdditionOp, Multiplication>;

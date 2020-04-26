@@ -12,8 +12,9 @@ fn main() {
     var greeting = "Hello";
     var recipient = "World!";
     print greeting + " " + recipient;
-    var PI = 3.1415;
-    var r = 2;
+    var PI = 3.1415;    // vardecl w/ initializer
+    var r;  // test vardecl w/o initializer
+    r = 3;  // test assignment
     var area = PI * r * r;
     print area;
     // This next line has an error.
@@ -117,6 +118,14 @@ impl Environment {
     fn define(&mut self, name: &str, value: Value) {
         self.values.insert(name.to_string(), value);
     }
+    fn assign(&mut self, name: &str, value: Value) -> Result<Value, ()> {
+        if self.values.contains_key(name) {
+            self.values.insert(name.to_string(), value.clone());
+            Ok(value)
+        } else {
+            Err(())
+        }
+    }
     fn get(&self, name: &str) -> Option<Value> {
         self.values.get(name).and_then(|v| Some(v.clone()))
     }
@@ -137,7 +146,8 @@ fn interpret_statement<'s, 'e>(
             Ok(())
         }
         VarDecl(i, e) => {
-            environment.define(&i, evaluate(*e, environment)?);
+            let value = evaluate(*e, environment)?;
+            environment.define(&i, value);
             Ok(())
         }
     }
@@ -239,10 +249,7 @@ fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     }
 }
 
-fn evaluate<'s, 'e>(
-    expr: ast::Expr,
-    environment: &'e Environment,
-) -> Result<Value, Error<'s>> {
+fn evaluate<'s, 'e>(expr: ast::Expr, environment: &'e mut Environment) -> Result<Value, Error<'s>> {
     match expr {
         ast::Expr::Nil => Ok(Value::Nil),
         ast::Expr::Number(n) => Ok(Value::Number(n)),
@@ -274,6 +281,16 @@ fn evaluate<'s, 'e>(
         ast::Expr::Var { name, location } => environment
             .get(&name)
             .ok_or_else(|| Error::Runtime(RuntimeError::IdentifierNotFound { name, location })),
+        ast::Expr::Assignment {
+            name,
+            rhs,
+            location,
+        } => {
+            let value = evaluate(*rhs, environment)?;
+            environment.assign(&name, value).or(Err(Error::Runtime(
+                RuntimeError::IdentifierNotFound { name, location },
+            )))
+        }
     }
 }
 
@@ -301,8 +318,8 @@ fn parse_string(source: &str) -> Result<ast::Expr, Error> {
 
 fn evaluate_string(source: &str) -> Result<Value, Error> {
     let result = parse_string(source);
-    let environment = Environment::new();
-    result.and_then(|expr| evaluate(expr, &environment))
+    let mut environment = Environment::new();
+    result.and_then(|expr| evaluate(expr, &mut environment))
 }
 
 #[test]
