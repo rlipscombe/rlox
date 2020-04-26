@@ -1,4 +1,10 @@
 #[derive(Debug, PartialEq)]
+pub struct Location {
+    pub start: usize,
+    pub end: usize,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     Nil,
     Number(f64),
@@ -6,7 +12,7 @@ pub enum Expr {
     String(String),
     Unary(UnaryOp, Box<Expr>),
     Binary(Box<Expr>, BinaryOp, Box<Expr>),
-    Var{ name: String, location: (usize, usize) },
+    Var{ name: String, location: Location },
 }
 
 #[derive(Debug, PartialEq)]
@@ -38,4 +44,8 @@ pub enum Stmt {
     Expr(Box<Expr>),
     Print(Box<Expr>),
     VarDecl(String, Box<Expr>),
+}
+
+pub fn location(s: usize, e: usize) -> Location {
+    Location { start: s, end: e }
 }

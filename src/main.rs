@@ -25,26 +25,26 @@ fn main() {
         Ok(_) => {}
         Err(e) => match e {
             Error::Parse(ParseError::UnrecognizedToken{token:(start,_, end), expected}) => {
-                let location = (start, end);
-                if let Some((line_num, line, offset)) = get_source_at_location(source, location) {
+                let location = ast::Location { start, end };
+                if let Some(report) = get_source_at_location(source, location) {
                     eprintln!(
-                        "{}: unrecognized token at line {}:{}:{}; expected one of {}",
-                        path, line_num, offset.0, offset.1, expected.join(", ")
+                        "{}: unrecognized token at line {}:{}; expected one of {}",
+                        path, report.line, report.start, expected.join(", ")
                     );
-                    eprintln!("{}", line);
-                    eprintln!("{:>offset$}{:^>length$}", "", "^", offset = offset.0 - 1, length = offset.1 - offset.0 + 1);
+                    eprintln!("{}", report.text);
+                    eprintln!("{:>offset$}{:^>length$}", "", "^", offset = report.start - 1, length = report.end - report.start + 1);
                 } else {
                     eprintln!("{}: unrecognized token; expected one of {}", path, expected.join(", "));
                 }
             }
             Error::Runtime(RuntimeError::IdentifierNotFound { name, location }) => {
-                if let Some((line_num, line, offset)) = get_source_at_location(source, location) {
+                if let Some(report) = get_source_at_location(source, location) {
                     eprintln!(
-                        "{}: identifier '{}' not found at line {}:{}:{}",
-                        path, name, line_num, offset.0, offset.1
+                        "{}: identifier '{}' not found at line {}:{}",
+                        path, name, report.line, report.start
                     );
-                    eprintln!("{}", line);
-                    eprintln!("{:>offset$}{:^>length$}", "", "^", offset = offset.0 - 1, length = offset.1 - offset.0 + 1);
+                    eprintln!("{}", report.text);
+                    eprintln!("{:>offset$}{:^>length$}", "", "^", offset = report.start - 1, length = report.end - report.start + 1);
                 } else {
                     eprintln!("{}: identifier '{}' not found", path, name);
                 }
@@ -56,10 +56,17 @@ fn main() {
     };
 }
 
+struct ReportLocation<'a> {
+    line: usize,
+    text: &'a str,
+    start: usize,
+    end: usize,
+}
+
 fn get_source_at_location(
     source: &str,
-    location: (usize, usize),
-) -> Option<(usize, &str, (usize, usize))> {
+    location: ast::Location,
+) -> Option<ReportLocation> {
     let mut lines: Vec<(usize, &str)> = Vec::new();
     let mut offset = 0;
     for s in source.split('\n') {
@@ -69,8 +76,9 @@ fn get_source_at_location(
 
     let mut line = 1;
     for (x, s) in lines {
-        if x + s.len() > location.0 {
-            return Some((line, s, (location.0 - x + 1, location.1 - x)));
+        if x + s.len() > location.start {
+            let report = ReportLocation { line: line, text: s, start: location.start - x + 1, end: location.end - x };
+            return Some(report);
         }
         line += 1;
     }
@@ -282,7 +290,7 @@ enum RuntimeError {
     TypeMismatch,
     IdentifierNotFound {
         name: String,
-        location: (usize, usize),
+        location: ast::Location,
     },
 }
 

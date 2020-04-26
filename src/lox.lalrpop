@@ -65,7 +65,7 @@ Term: Expr = {
     "nil" => Expr::Nil,
     String => Expr::String(<>),
     "(" <Expr> ")",
-    <s:@L> <i:Identifier> <e:@L> => Expr::Var { name: i.to_string(), location: (s, e) },
+    <s:@L> <i:Identifier> <e:@L> => Expr::Var { name: i.to_string(), location: location(s, e) },
 };
 
 Num: f64 = r"[0-9]+(\.[0-9]+)?" => f64::from_str(<>).unwrap();
