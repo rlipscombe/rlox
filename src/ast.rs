@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     Nil,
     Number(f64),
@@ -8,13 +8,13 @@ pub enum Expr {
     Binary(Box<Expr>, BinaryOp, Box<Expr>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum UnaryOp {
     Invert,
     Negate,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum BinaryOp {
     Mul,
     Div,
@@ -30,4 +30,10 @@ pub enum BinaryOp {
     Le,
     Gt,
     Ge,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Stmt {
+    Expr(Box<Expr>),
+    Print(Box<Expr>),
 }

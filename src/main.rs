@@ -5,7 +5,38 @@ lalrpop_mod!(pub lox);
 pub mod ast;
 
 fn main() {
-    println!("{:?}", evaluate_string("-123"));
+    let source = r#"print "Hello World!";"#;
+    interpret_source(source).unwrap();
+}
+
+fn interpret_source(source: &str) -> Result<(), Error> {
+    let parser = lox::StatementParser::new();
+    let parsed = parser.parse(source).map_err(|e| Error::Parse(e))?;
+    interpret_ast(parsed)
+}
+
+fn interpret_ast<'s>(ast: Box<ast::Stmt>) -> Result<(), Error<'s>> {
+    use ast::Stmt::*;
+    match *ast {
+        Expr(e) => {
+            evaluate(e)?;
+            Ok(())
+        }
+        Print(e) => {
+            do_print(evaluate(e)?);
+            Ok(())
+        }
+    }
+}
+
+fn do_print(e: Value) {
+    use Value::*;
+    match e {
+        Nil => println!("<nil>"),
+        Number(n) => println!("{}", n),
+        Boolean(b) => println!("{}", b),
+        String(s) => println!("{}", s),
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -261,10 +292,26 @@ fn double_negate_bool() {
 
 #[test]
 fn string_literal() {
-    assert_eq!(evaluate_string(r#""Hello World!""#), Ok(Value::String("Hello World!".to_string())));
+    assert_eq!(
+        evaluate_string(r#""Hello World!""#),
+        Ok(Value::String("Hello World!".to_string()))
+    );
 }
 
 #[test]
 fn empty_string_literal() {
     assert_eq!(evaluate_string(r#""""#), Ok(Value::String("".to_string())));
+}
+
+#[test]
+fn print_hello() {
+    use ast::*;
+    let parser = lox::StatementParser::new();
+    let parsed = parser.parse(r#"print "Hello World!";"#);
+    assert_eq!(
+        parsed,
+        Ok(Box::new(Stmt::Print(Box::new(Expr::String(
+            "Hello World!".to_string()
+        )))))
+    );
 }

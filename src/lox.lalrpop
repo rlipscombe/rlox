@@ -3,6 +3,14 @@ use crate::ast::*;
 
 grammar;
 
+pub Statement = {
+    ExprStmt,
+    PrintStmt,
+}
+
+ExprStmt: Box<Stmt> = <Expr> ";" => Box::new(Stmt::Expr(<>));
+PrintStmt: Box<Stmt> = "print" <Expr> ";" => Box::new(Stmt::Print(<>));
+
 pub Expr = BinaryOperator<Expr, EqualityOp, Equality>;
 Equality = BinaryOperator<Equality, CompareOp, Comparison>;
 Comparison = BinaryOperator<Comparison, AddOp, Factor>;
