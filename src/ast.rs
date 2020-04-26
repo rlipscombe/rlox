@@ -6,6 +6,7 @@ pub enum Expr {
     String(String),
     Unary(UnaryOp, Box<Expr>),
     Binary(Box<Expr>, BinaryOp, Box<Expr>),
+    Var(String),
 }
 
 #[derive(Debug, PartialEq)]
@@ -36,4 +37,5 @@ pub enum BinaryOp {
 pub enum Stmt {
     Expr(Box<Expr>),
     Print(Box<Expr>),
+    VarDecl(String, Box<Expr>),
 }

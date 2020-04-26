@@ -2,14 +2,22 @@
 extern crate lalrpop_util;
 lalrpop_mod!(pub lox);
 
+use std::collections::HashMap;
+
 pub mod ast;
 
 fn main() {
     let source = r#"
-    print "Hello World!";
-    print 45 + 65;
+    var greeting = "Hello";
+    var recipient = "World!";
+    print greeting + " " + recipient;
+    var PI = 3.1415;
+    var r = 2;
+    var area = PI * r * r;
+    print area;
     "#;
-    match interpret_source(source) {
+    let mut environment = Environment::new();
+    match interpret_source(source, &mut environment) {
         Ok(_) => {}
         Err(e) => {
             eprintln!("{:?}", e);
@@ -17,28 +25,56 @@ fn main() {
     };
 }
 
-fn interpret_source(source: &str) -> Result<(), Error> {
+fn interpret_source<'s>(source: &'s str, environment: &'s mut Environment) -> Result<(), Error<'s>> {
     let parser = lox::ProgramParser::new();
     let program = parser.parse(source).map_err(|e| Error::Parse(e))?;
-    interpret_statements(program)
+    interpret_statements(program, environment)
 }
 
-fn interpret_statements<'s>(statements: Vec<Box<ast::Stmt>>) -> Result<(), Error<'s>> {
+fn interpret_statements<'s>(
+    statements: Vec<Box<ast::Stmt>>,
+    environment: &'s mut Environment,
+) -> Result<(), Error<'s>> {
     for s in statements {
-        interpret_statement(s)?;
+        interpret_statement(s, environment)?;
     }
     Ok(())
 }
 
-fn interpret_statement<'s>(statement: Box<ast::Stmt>) -> Result<(), Error<'s>> {
+struct Environment {
+    values: HashMap<String, Value>,
+}
+
+impl Environment {
+    fn new() -> Self {
+        Self {
+            values: HashMap::new(),
+        }
+    }
+    fn define(&mut self, name: &str, value: Value) {
+        self.values.insert(name.to_string(), value);
+    }
+    fn get(&self, name: &str) -> Option<Value> {
+        self.values.get(name).and_then(|v| Some(v.clone()))
+    }
+}
+
+fn interpret_statement<'s, 'e>(
+    statement: Box<ast::Stmt>,
+    environment: &'e mut Environment,
+) -> Result<(), Error<'s>> {
     use ast::Stmt::*;
     match *statement {
         Expr(e) => {
-            evaluate(e)?;
+            evaluate(e, environment)?;
             Ok(())
         }
         Print(e) => {
-            do_print(evaluate(e)?);
+            do_print(evaluate(e, environment)?);
+            Ok(())
+        }
+        VarDecl(i, e) => {
+            environment.define(&i, evaluate(e, environment)?);
             Ok(())
         }
     }
@@ -54,7 +90,7 @@ fn do_print(e: Value) {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 enum Value {
     Nil,
     Number(f64),
@@ -65,6 +101,7 @@ enum Value {
 fn do_add<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
+        (Value::String(l), Value::String(r)) => Ok(Value::String(l + &r)),
         _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
@@ -139,35 +176,38 @@ fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     }
 }
 
-fn evaluate<'s>(expr: Box<ast::Expr>) -> Result<Value, Error<'s>> {
+fn evaluate<'s, 'e>(expr: Box<ast::Expr>, environment: &'e Environment) -> Result<Value, Error<'s>> {
     match *expr {
         ast::Expr::Nil => Ok(Value::Nil),
         ast::Expr::Number(n) => Ok(Value::Number(n)),
         ast::Expr::Boolean(b) => Ok(Value::Boolean(b)),
         ast::Expr::String(s) => Ok(Value::String(s)),
         ast::Expr::Unary(o, r) => match o {
-            ast::UnaryOp::Invert => match evaluate(r)? {
+            ast::UnaryOp::Invert => match evaluate(r, environment)? {
                 Value::Boolean(b) => Ok(Value::Boolean(!b)),
                 _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
             },
-            ast::UnaryOp::Negate => match evaluate(r)? {
+            ast::UnaryOp::Negate => match evaluate(r, environment)? {
                 Value::Number(n) => Ok(Value::Number(-n)),
                 _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
             },
         },
         ast::Expr::Binary(l, o, r) => match o {
-            ast::BinaryOp::Add => do_add(evaluate(l)?, evaluate(r)?),
-            ast::BinaryOp::Sub => do_sub(evaluate(l)?, evaluate(r)?),
-            ast::BinaryOp::Mul => do_mul(evaluate(l)?, evaluate(r)?),
-            ast::BinaryOp::Div => do_div(evaluate(l)?, evaluate(r)?),
-            ast::BinaryOp::Mod => do_mod(evaluate(l)?, evaluate(r)?),
-            ast::BinaryOp::Eq => do_eq(evaluate(l)?, evaluate(r)?),
-            ast::BinaryOp::Ne => do_ne(evaluate(l)?, evaluate(r)?),
-            ast::BinaryOp::Lt => do_lt(evaluate(l)?, evaluate(r)?),
-            ast::BinaryOp::Le => do_le(evaluate(l)?, evaluate(r)?),
-            ast::BinaryOp::Gt => do_gt(evaluate(l)?, evaluate(r)?),
-            ast::BinaryOp::Ge => do_ge(evaluate(l)?, evaluate(r)?),
+            ast::BinaryOp::Add => do_add(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Sub => do_sub(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Mul => do_mul(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Div => do_div(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Mod => do_mod(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Eq => do_eq(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Ne => do_ne(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Lt => do_lt(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Le => do_le(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Gt => do_gt(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Ge => do_ge(evaluate(l, environment)?, evaluate(r, environment)?),
         },
+        ast::Expr::Var(i) => {
+            environment.get(&i).ok_or_else(|| Error::Runtime(RuntimeError::IdentifierNotFound))
+        }
     }
 }
 
@@ -181,7 +221,8 @@ enum Error<'s> {
 
 #[derive(Debug, PartialEq)]
 enum RuntimeError {
-    TypeMismatch
+    TypeMismatch,
+    IdentifierNotFound,
 }
 
 fn parse_string(source: &str) -> Result<Box<ast::Expr>, Error> {
@@ -191,7 +232,8 @@ fn parse_string(source: &str) -> Result<Box<ast::Expr>, Error> {
 
 fn evaluate_string(source: &str) -> Result<Value, Error> {
     let result = parse_string(source);
-    result.and_then(evaluate)
+    let environment = Environment::new();
+    result.and_then(|expr| evaluate(expr, &environment))
 }
 
 #[test]

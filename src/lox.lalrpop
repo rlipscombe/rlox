@@ -3,13 +3,15 @@ use crate::ast::*;
 
 grammar;
 
-pub Program = Statement*;
+pub Program = Declaration*;
 
-pub Statement = {
-    ExprStmt,
-    PrintStmt,
+Declaration: Box<Stmt> = { VarDecl, Statement, }
+VarDecl: Box<Stmt> = {
+    "var" <i:Identifier> "=" <e:Expr> ";" => Box::new(Stmt::VarDecl(i.to_string(), e)),
+    "var" <i:Identifier> ";" => Box::new(Stmt::VarDecl(i.to_string(), Box::new(Expr::Nil))),
 }
 
+pub Statement = { ExprStmt, PrintStmt, }
 ExprStmt: Box<Stmt> = <Expr> ";" => Box::new(Stmt::Expr(<>));
 PrintStmt: Box<Stmt> = "print" <Expr> ";" => Box::new(Stmt::Print(<>));
 
@@ -53,6 +55,7 @@ Term: Box<Expr> = {
     "nil" => Box::new(Expr::Nil),
     String => Box::new(Expr::String(<>)),
     "(" <Expr> ")",
+    <i:Identifier> => Box::new(Expr::Var(i.to_string())),
 };
 
 Num: f64 = r"[0-9]+(\.[0-9]+)?" => f64::from_str(<>).unwrap();
@@ -63,6 +66,8 @@ Bool: bool = {
 
 // TODO: Support escape characters.
 String: String = <s:r#""[^"]*""#> => (s[1..s.len()-1]).to_string();
+
+Identifier = r#"[a-zA-Z_][a-zA-Z_0-9]*"#;
 
 // Helpers
 UnaryOperator<Operator, Right, Next>: Box<Expr> = {
