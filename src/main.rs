@@ -87,7 +87,7 @@ fn interpret_source<'s>(
 }
 
 fn interpret_statements<'s>(
-    statements: Vec<Box<ast::Stmt>>,
+    statements: Vec<ast::Stmt>,
     environment: &'s mut Environment,
 ) -> Result<(), Error<'s>> {
     for s in statements {
@@ -115,21 +115,21 @@ impl Environment {
 }
 
 fn interpret_statement<'s, 'e>(
-    statement: Box<ast::Stmt>,
+    statement: ast::Stmt,
     environment: &'e mut Environment,
 ) -> Result<(), Error<'s>> {
     use ast::Stmt::*;
-    match *statement {
+    match statement {
         Expr(e) => {
-            evaluate(e, environment)?;
+            evaluate(*e, environment)?;
             Ok(())
         }
         Print(e) => {
-            do_print(evaluate(e, environment)?);
+            do_print(evaluate(*e, environment)?);
             Ok(())
         }
         VarDecl(i, e) => {
-            environment.define(&i, evaluate(e, environment)?);
+            environment.define(&i, evaluate(*e, environment)?);
             Ok(())
         }
     }
@@ -232,36 +232,36 @@ fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
 }
 
 fn evaluate<'s, 'e>(
-    expr: Box<ast::Expr>,
+    expr: ast::Expr,
     environment: &'e Environment,
 ) -> Result<Value, Error<'s>> {
-    match *expr {
+    match expr {
         ast::Expr::Nil => Ok(Value::Nil),
         ast::Expr::Number(n) => Ok(Value::Number(n)),
         ast::Expr::Boolean(b) => Ok(Value::Boolean(b)),
         ast::Expr::String(s) => Ok(Value::String(s)),
         ast::Expr::Unary(o, r) => match o {
-            ast::UnaryOp::Invert => match evaluate(r, environment)? {
+            ast::UnaryOp::Invert => match evaluate(*r, environment)? {
                 Value::Boolean(b) => Ok(Value::Boolean(!b)),
                 _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
             },
-            ast::UnaryOp::Negate => match evaluate(r, environment)? {
+            ast::UnaryOp::Negate => match evaluate(*r, environment)? {
                 Value::Number(n) => Ok(Value::Number(-n)),
                 _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
             },
         },
         ast::Expr::Binary(l, o, r) => match o {
-            ast::BinaryOp::Add => do_add(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Sub => do_sub(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Mul => do_mul(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Div => do_div(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Mod => do_mod(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Eq => do_eq(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Ne => do_ne(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Lt => do_lt(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Le => do_le(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Gt => do_gt(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Ge => do_ge(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Add => do_add(evaluate(*l, environment)?, evaluate(*r, environment)?),
+            ast::BinaryOp::Sub => do_sub(evaluate(*l, environment)?, evaluate(*r, environment)?),
+            ast::BinaryOp::Mul => do_mul(evaluate(*l, environment)?, evaluate(*r, environment)?),
+            ast::BinaryOp::Div => do_div(evaluate(*l, environment)?, evaluate(*r, environment)?),
+            ast::BinaryOp::Mod => do_mod(evaluate(*l, environment)?, evaluate(*r, environment)?),
+            ast::BinaryOp::Eq => do_eq(evaluate(*l, environment)?, evaluate(*r, environment)?),
+            ast::BinaryOp::Ne => do_ne(evaluate(*l, environment)?, evaluate(*r, environment)?),
+            ast::BinaryOp::Lt => do_lt(evaluate(*l, environment)?, evaluate(*r, environment)?),
+            ast::BinaryOp::Le => do_le(evaluate(*l, environment)?, evaluate(*r, environment)?),
+            ast::BinaryOp::Gt => do_gt(evaluate(*l, environment)?, evaluate(*r, environment)?),
+            ast::BinaryOp::Ge => do_ge(evaluate(*l, environment)?, evaluate(*r, environment)?),
         },
         ast::Expr::Var { name, location } => environment
             .get(&name)
@@ -286,7 +286,7 @@ enum RuntimeError {
     },
 }
 
-fn parse_string(source: &str) -> Result<Box<ast::Expr>, Error> {
+fn parse_string(source: &str) -> Result<ast::Expr, Error> {
     let parser = lox::ExprParser::new();
     parser.parse(source).map_err(|e| Error::Parse(e))
 }
@@ -433,8 +433,8 @@ fn print_hello() {
     let parsed = parser.parse(r#"print "Hello World!";"#);
     assert_eq!(
         parsed,
-        Ok(Box::new(Stmt::Print(Box::new(Expr::String(
+        Ok(Stmt::Print(Box::new(Expr::String(
             "Hello World!".to_string()
-        )))))
+        ))))
     );
 }
