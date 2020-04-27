@@ -23,6 +23,7 @@ fn main() {
     let source = std::fs::read_to_string(path).expect("read file");
 
     let mut environment = Environment::new();
+    environment.push();
     match interpret_source(&source, &mut environment) {
         Ok(_) => {}
         Err(e) => report_error(&path, &source, e),
@@ -31,16 +32,16 @@ fn main() {
 
 fn interpret_source<'s>(
     source: &'s str,
-    environment: &'s mut Environment,
+    environment: &mut Environment,
 ) -> Result<(), Error<'s>> {
     let parser = lox::ProgramParser::new();
     let program = parser.parse(source).map_err(|e| Error::Parse(e))?;
     interpret_statements(program, environment)
 }
 
-fn interpret_statements<'s, 'e>(
+fn interpret_statements<'s>(
     statements: Vec<ast::Stmt>,
-    environment: &'e mut Environment,
+    environment: &mut Environment,
 ) -> Result<(), Error<'s>> {
     for s in statements {
         interpret_statement(s, environment)?;
@@ -48,9 +49,9 @@ fn interpret_statements<'s, 'e>(
     Ok(())
 }
 
-fn interpret_statement<'s, 'e>(
+fn interpret_statement<'s>(
     statement: ast::Stmt,
-    environment: &'e mut Environment,
+    environment: &mut Environment,
 ) -> Result<(), Error<'s>> {
     use ast::Stmt::*;
     match statement {
@@ -72,7 +73,12 @@ fn interpret_statement<'s, 'e>(
             environment.define(&i, value);
             Ok(())
         }
-        Block(statements) => interpret_statements(statements, environment),
+        Block(statements) => {
+            environment.push();
+            let result = interpret_statements(statements, environment);
+            environment.pop();
+            result
+        }
     }
 }
 
@@ -173,9 +179,9 @@ fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     }
 }
 
-pub fn evaluate<'s, 'e>(
+pub fn evaluate<'s>(
     expr: ast::Expr,
-    environment: &'e mut Environment,
+    environment: &mut Environment,
 ) -> Result<Value, Error<'s>> {
     match expr {
         ast::Expr::Nil => Ok(Value::Nil),
