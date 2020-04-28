@@ -28,25 +28,6 @@ fn main() {
     };
 }
 
-fn interpret_source<'s>(
-    source: &'s str,
-    environment: &'s mut Environment,
-) -> Result<(), Error<'s>> {
-    let parser = lox::ProgramParser::new();
-    let program = parser.parse(source).map_err(|e| Error::Parse(e))?;
-    interpret_statements(program, environment)
-}
-
-fn interpret_statements<'s>(
-    statements: Vec<ast::Stmt>,
-    environment: &'s mut Environment,
-) -> Result<(), Error<'s>> {
-    for s in statements {
-        interpret_statement(s, environment)?;
-    }
-    Ok(())
-}
-
 struct Environment {
     values: HashMap<String, Value>,
 }
@@ -71,6 +52,25 @@ impl Environment {
     fn get(&self, name: &str) -> Option<Value> {
         self.values.get(name).and_then(|v| Some(v.clone()))
     }
+}
+
+fn interpret_source<'s>(
+    source: &'s str,
+    environment: &'s mut Environment,
+) -> Result<(), Error<'s>> {
+    let parser = lox::ProgramParser::new();
+    let program = parser.parse(source).map_err(|e| Error::Parse(e))?;
+    interpret_statements(program, environment)
+}
+
+fn interpret_statements<'s, 'e>(
+    statements: Vec<ast::Stmt>,
+    environment: &'e mut Environment,
+) -> Result<(), Error<'s>> {
+    for s in statements {
+        interpret_statement(s, environment)?;
+    }
+    Ok(())
 }
 
 fn interpret_statement<'s, 'e>(
