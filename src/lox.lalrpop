@@ -3,6 +3,15 @@ use crate::ast::*;
 
 grammar;
 
+match {
+    // Ignore C++-style comments
+    r"//[^\n\r]*[\n\r]*" => {}
+}
+else {
+    r"\s*" => {},
+    _
+}
+
 pub Program = Declaration*;
 
 Declaration: Box<Stmt> = { VarDecl, Statement, }
