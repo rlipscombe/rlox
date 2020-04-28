@@ -1,0 +1,32 @@
+use std::str::FromStr;
+use crate::ast::*;
+
+grammar;
+
+pub Expr: Box<Expr> = {
+    <l:Expr> <o:ExprOp> <r:Factor> => Box::new(Expr::Binary(l, o, r)),
+    Factor,
+}
+
+ExprOp: BinaryOp = {
+    "+" => BinaryOp::Add,
+    "-" => BinaryOp::Sub,
+}
+
+pub Factor: Box<Expr> = {
+    <l:Factor> <o:FactorOp> <r:Term> => Box::new(Expr::Binary(l, o, r)),
+    Term,
+}
+
+FactorOp: BinaryOp = {
+    "*" => BinaryOp::Mul,
+    "/" => BinaryOp::Div,
+}
+
+pub Term: Box<Expr> = {
+    Num => Box::new(Expr::Number(<>)),
+    "-" <n:Num> => Box::new(Expr::Number(-n)),
+    "(" <Expr> ")",
+};
+
+Num: f64 = r"[0-9]+(\.[0-9]+)?" => f64::from_str(<>).unwrap();
