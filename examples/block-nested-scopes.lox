@@ -1,0 +1,29 @@
+// Scoping
+var a = "global a";
+var b = "global b";
+var c = "global c";
+{
+    var a = "outer a";
+    var b = "outer b";
+    {
+        var a = "inner a";
+        print a;
+        assert a == "inner a";
+        print b;
+        assert b == "outer b";
+        print c;
+        assert c == "global c";
+    }
+    print a;
+    assert a == "outer a";
+    print b;
+    assert b == "outer b";
+    print c;
+    assert c == "global c";
+}
+print a;
+assert a == "global a";
+print b;
+assert b == "global b";
+print c;
+assert c == "global c";

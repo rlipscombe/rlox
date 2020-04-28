@@ -1,0 +1,3 @@
+var greeting = "Hello";
+var recipient = "World!";
+print greeting + " " + recipient;

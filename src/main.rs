@@ -9,58 +9,19 @@ use environment::Environment;
 mod test;
 
 fn main() {
-    let path = "<verbatim>";
-    let source = r#"
-    // String catenation
-    var greeting = "Hello";
-    var recipient = "World!";
-    print greeting + " " + recipient;
-
-    // Area of a circle
-    var PI = 3.1415;    // vardecl w/ initializer
-    var r;  // test vardecl w/o initializer
-    r = 3;  // test assignment
-    var area = PI * r * r;
-    print area;
-
-    // Assignment should be right-associative
-    var x;
-    {
-        // BLOCK:
-        var y;
-        x = y = 42;
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() <= 1 {
+        eprintln!("{} file.lox", args[0]);
+        return;
     }
-    print x;
 
-    // Scoping
-    var a = "global a";
-    var b = "global b";
-    var c = "global c";
-    {
-      var a = "outer a";
-      var b = "outer b";
-      {
-        var a = "inner a";
-        assert a == "inner a";
-        assert b == "outer b";
-        assert c == "global c";
-      }
-      assert a == "outer a";
-      assert b == "outer b";
-      assert c == "global c";
-    }
-    assert a == "global a";
-    assert b == "global b";
-    assert c == "global c";
+    let path = &args[1];
+    let source = std::fs::read_to_string(path).expect("read file");
 
-    // This next line has an error: height is undefined.
-    var volume = PI * r * r * height;
-    print volume;
-    "#;
     let mut environment = Environment::new();
-    match interpret_source(source, &mut environment) {
+    match interpret_source(&source, &mut environment) {
         Ok(_) => {}
-        Err(e) => report_error(path, source, e),
+        Err(e) => report_error(&path, &source, e),
     };
 }
 

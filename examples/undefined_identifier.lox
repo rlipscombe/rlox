@@ -1,0 +1,5 @@
+// height is undefined.
+var PI = 3.1415;    // vardecl w/ initializer
+var r = 3;
+var volume = PI * r * r * height;
+print volume;

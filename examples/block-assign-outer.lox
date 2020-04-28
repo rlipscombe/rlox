@@ -1,0 +1,8 @@
+// Assignment should be right-associative
+var x;
+{
+    // BLOCK:
+    var y;
+    x = y = 42;
+}
+print x;

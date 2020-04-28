@@ -1,0 +1,6 @@
+// Area of a circle
+var PI = 3.1415;    // vardecl w/ initializer
+var r;  // test vardecl w/o initializer
+r = 3;  // test assignment
+var area = PI * r * r;
+print area;
