@@ -3,10 +3,9 @@ use crate::ast::*;
 
 grammar;
 
-pub Expr: Box<Expr> = {
-    <l:Expr> <o:CompareOp> <r:Comparison> => Box::new(Expr::Binary(l, o, r)),
-    Comparison
-}
+pub Expr = BinaryOperator<Expr, CompareOp, Comparison>;
+Comparison = BinaryOperator<Comparison, AddOp, Factor>;
+Factor = BinaryOperator<Factor, MulOp, Term>;
 
 CompareOp: BinaryOp = {
     "<" => BinaryOp::Lt,
@@ -15,22 +14,12 @@ CompareOp: BinaryOp = {
     ">=" => BinaryOp::Ge,
 }
 
-pub Comparison: Box<Expr> = {
-    <l:Comparison> <o:AddOp> <r:Factor> => Box::new(Expr::Binary(l, o, r)),
-    Factor,
-}
-
 AddOp: BinaryOp = {
     "+" => BinaryOp::Add,
     "-" => BinaryOp::Sub,
 }
 
-Factor: Box<Expr> = {
-    <l:Factor> <o:FactorOp> <r:Term> => Box::new(Expr::Binary(l, o, r)),
-    Term,
-}
-
-FactorOp: BinaryOp = {
+MulOp: BinaryOp = {
     "*" => BinaryOp::Mul,
     "/" => BinaryOp::Div,
 }
@@ -47,4 +36,10 @@ Num: f64 = r"[0-9]+(\.[0-9]+)?" => f64::from_str(<>).unwrap();
 Bool: bool = {
     "true" => true,
     "false" => false,
+}
+
+// Helpers
+BinaryOperator<Left, Operator, Right>: Box<Expr> = {
+    Left Operator Right => Box::new(Expr::Binary(<>)),
+    Right
 }
