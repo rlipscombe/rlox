@@ -65,77 +65,77 @@ enum Value {
 fn do_add<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
-        _ => Err(Error::Runtime),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
 
 fn do_sub<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l - r)),
-        _ => Err(Error::Runtime),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
 
 fn do_mul<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l * r)),
-        _ => Err(Error::Runtime),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
 
 fn do_div<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l / r)),
-        _ => Err(Error::Runtime),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
 
 fn do_mod<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l % r)),
-        _ => Err(Error::Runtime),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
 
 fn do_eq<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l == r)),
-        _ => Err(Error::Runtime),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
 
 fn do_ne<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l != r)),
-        _ => Err(Error::Runtime),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
 
 fn do_lt<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l < r)),
-        _ => Err(Error::Runtime),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
 
 fn do_le<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l <= r)),
-        _ => Err(Error::Runtime),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
 
 fn do_gt<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l > r)),
-        _ => Err(Error::Runtime),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
 
 fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l >= r)),
-        _ => Err(Error::Runtime),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
 
@@ -148,11 +148,11 @@ fn evaluate<'s>(expr: Box<ast::Expr>) -> Result<Value, Error<'s>> {
         ast::Expr::Unary(o, r) => match o {
             ast::UnaryOp::Invert => match evaluate(r)? {
                 Value::Boolean(b) => Ok(Value::Boolean(!b)),
-                _ => Err(Error::Runtime),
+                _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
             },
             ast::UnaryOp::Negate => match evaluate(r)? {
                 Value::Number(n) => Ok(Value::Number(-n)),
-                _ => Err(Error::Runtime),
+                _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
             },
         },
         ast::Expr::Binary(l, o, r) => match o {
@@ -176,7 +176,12 @@ type ParseError<'s> = lalrpop_util::ParseError<usize, lox::Token<'s>, &'s str>;
 #[derive(Debug, PartialEq)]
 enum Error<'s> {
     Parse(ParseError<'s>),
-    Runtime,
+    Runtime(RuntimeError),
+}
+
+#[derive(Debug, PartialEq)]
+enum RuntimeError {
+    TypeMismatch
 }
 
 fn parse_string(source: &str) -> Result<Box<ast::Expr>, Error> {
