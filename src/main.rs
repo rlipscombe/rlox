@@ -8,28 +8,6 @@ fn main() {
     println!("{:?}", evaluate_string("-123"));
 }
 
-#[test]
-fn literal_number() {
-    assert_eq!(Ok(Value::Number(123.0)), evaluate_string("123"));
-}
-
-#[test]
-fn paren_number() {
-    assert_eq!(Ok(Value::Number(123.0)), evaluate_string("(123)"));
-}
-
-#[test]
-fn paren_imbalanced() {
-    let parser = lox::ExprParser::new();
-    assert!(parser.parse("(123").is_err());
-}
-
-#[test]
-fn paren_empty() {
-    let parser = lox::ExprParser::new();
-    assert!(parser.parse("()").is_err());
-}
-
 #[derive(PartialEq, Debug)]
 enum Value {
     Nil,
@@ -154,6 +132,28 @@ fn parse_string(source: &str) -> Result<Box<ast::Expr>, Error> {
 fn evaluate_string(source: &str) -> Result<Value, Error> {
     let result = parse_string(source);
     result.and_then(evaluate)
+}
+
+#[test]
+fn literal_number() {
+    assert_eq!(Ok(Value::Number(123.0)), evaluate_string("123"));
+}
+
+#[test]
+fn paren_number() {
+    assert_eq!(Ok(Value::Number(123.0)), evaluate_string("(123)"));
+}
+
+#[test]
+fn paren_imbalanced() {
+    let parser = lox::ExprParser::new();
+    assert!(parser.parse("(123").is_err());
+}
+
+#[test]
+fn paren_empty() {
+    let parser = lox::ExprParser::new();
+    assert!(parser.parse("()").is_err());
 }
 
 #[test]
