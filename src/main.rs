@@ -5,19 +5,34 @@ lalrpop_mod!(pub lox);
 pub mod ast;
 
 fn main() {
-    let source = r#"print "Hello World!";"#;
-    interpret_source(source).unwrap();
+    let source = r#"
+    print "Hello World!";
+    print 45 + 65;
+    "#;
+    match interpret_source(source) {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("{:?}", e);
+        }
+    };
 }
 
 fn interpret_source(source: &str) -> Result<(), Error> {
-    let parser = lox::StatementParser::new();
-    let parsed = parser.parse(source).map_err(|e| Error::Parse(e))?;
-    interpret_ast(parsed)
+    let parser = lox::ProgramParser::new();
+    let program = parser.parse(source).map_err(|e| Error::Parse(e))?;
+    interpret_statements(program)
 }
 
-fn interpret_ast<'s>(ast: Box<ast::Stmt>) -> Result<(), Error<'s>> {
+fn interpret_statements<'s>(statements: Vec<Box<ast::Stmt>>) -> Result<(), Error<'s>> {
+    for s in statements {
+        interpret_statement(s)?;
+    }
+    Ok(())
+}
+
+fn interpret_statement<'s>(statement: Box<ast::Stmt>) -> Result<(), Error<'s>> {
     use ast::Stmt::*;
-    match *ast {
+    match *statement {
         Expr(e) => {
             evaluate(e)?;
             Ok(())

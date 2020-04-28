@@ -3,6 +3,8 @@ use crate::ast::*;
 
 grammar;
 
+pub Program = Statement*;
+
 pub Statement = {
     ExprStmt,
     PrintStmt,
