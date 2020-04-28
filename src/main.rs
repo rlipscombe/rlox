@@ -65,6 +65,13 @@ fn do_div<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     }
 }
 
+fn do_mod<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
+    match (lhs, rhs) {
+        (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l % r)),
+        _ => Err(Error::Runtime)
+    }
+}
+
 fn do_lt<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l < r)),
@@ -104,6 +111,7 @@ fn evaluate<'s>(expr: Box<ast::Expr>) -> Result<Value, Error<'s>> {
                 ast::BinaryOp::Sub => { do_sub(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Mul => { do_mul(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Div => { do_div(evaluate(l)?, evaluate(r)?) }
+                ast::BinaryOp::Mod => { do_mod(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Lt => { do_lt(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Le => { do_le(evaluate(l)?, evaluate(r)?) }
                 ast::BinaryOp::Gt => { do_gt(evaluate(l)?, evaluate(r)?) }

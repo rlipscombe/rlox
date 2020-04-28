@@ -22,6 +22,7 @@ AddOp: BinaryOp = {
 MulOp: BinaryOp = {
     "*" => BinaryOp::Mul,
     "/" => BinaryOp::Div,
+    "%" => BinaryOp::Mod,
 }
 
 Term: Box<Expr> = {

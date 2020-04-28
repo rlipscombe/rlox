@@ -10,6 +10,8 @@ pub enum Expr {
 pub enum BinaryOp {
     Mul,
     Div,
+    Mod,
+
     Add,
     Sub,
 
