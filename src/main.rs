@@ -97,6 +97,16 @@ fn evaluate<'s>(expr: Box<ast::Expr>) -> Result<Value, Error<'s>> {
         ast::Expr::Nil => Ok(Value::Nil),
         ast::Expr::Number(n) => Ok(Value::Number(n)),
         ast::Expr::Boolean(b) => Ok(Value::Boolean(b)),
+        ast::Expr::Unary(o, r) => match o {
+            ast::UnaryOp::Invert => match evaluate(r)? {
+                Value::Boolean(b) => Ok(Value::Boolean(!b)),
+                _ => Err(Error::Runtime),
+            },
+            ast::UnaryOp::Negate => match evaluate(r)? {
+                Value::Number(n) => Ok(Value::Number(-n)),
+                _ => Err(Error::Runtime),
+            },
+        },
         ast::Expr::Binary(l, o, r) => match o {
             ast::BinaryOp::Add => do_add(evaluate(l)?, evaluate(r)?),
             ast::BinaryOp::Sub => do_sub(evaluate(l)?, evaluate(r)?),
@@ -227,4 +237,22 @@ fn cmp_eq() {
     assert_eq!(evaluate_string("2 != 1"), Ok(Value::Boolean(true)));
     assert_eq!(evaluate_string("2 == 2"), Ok(Value::Boolean(true)));
     assert_eq!(evaluate_string("(1 + 1) == 2"), Ok(Value::Boolean(true)));
+}
+
+#[test]
+fn simple_bool() {
+    assert_eq!(evaluate_string("true"), Ok(Value::Boolean(true)));
+    assert_eq!(evaluate_string("false"), Ok(Value::Boolean(false)));
+}
+
+#[test]
+fn negate_bool() {
+    assert_eq!(evaluate_string("!true"), Ok(Value::Boolean(false)));
+    assert_eq!(evaluate_string("!false"), Ok(Value::Boolean(true)));
+}
+
+#[test]
+fn double_negate_bool() {
+    assert_eq!(evaluate_string("!!true"), Ok(Value::Boolean(true)));
+    assert_eq!(evaluate_string("!!(1 == 2)"), Ok(Value::Boolean(false)));
 }

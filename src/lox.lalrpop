@@ -6,7 +6,8 @@ grammar;
 pub Expr = BinaryOperator<Expr, EqualityOp, Equality>;
 Equality = BinaryOperator<Equality, CompareOp, Comparison>;
 Comparison = BinaryOperator<Comparison, AddOp, Factor>;
-Factor = BinaryOperator<Factor, MulOp, Term>;
+Factor = BinaryOperator<Factor, MulOp, Unary>;
+Unary = UnaryOperator<UnaryOp, Unary, Term>;
 
 EqualityOp: BinaryOp = {
     "==" => BinaryOp::Eq,
@@ -31,11 +32,15 @@ MulOp: BinaryOp = {
     "%" => BinaryOp::Mod,
 }
 
+UnaryOp: UnaryOp = {
+    "!" => UnaryOp::Invert,
+    "-" => UnaryOp::Negate,
+}
+
 Term: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
     Bool => Box::new(Expr::Boolean(<>)),
     "nil" => Box::new(Expr::Nil),
-    "-" <n:Num> => Box::new(Expr::Number(-n)),
     "(" <Expr> ")",
 };
 
@@ -46,6 +51,11 @@ Bool: bool = {
 }
 
 // Helpers
+UnaryOperator<Operator, Right, Next>: Box<Expr> = {
+    Operator Right => Box::new(Expr::Unary(<>)),
+    Next
+}
+
 BinaryOperator<Left, Operator, Right>: Box<Expr> = {
     Left Operator Right => Box::new(Expr::Binary(<>)),
     Right
