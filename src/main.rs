@@ -2,6 +2,10 @@
 extern crate lalrpop_util;
 lalrpop_mod!(pub lox);
 
+use codespan_reporting::diagnostic::{Diagnostic, Label};
+use codespan_reporting::files::SimpleFiles;
+use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
+
 pub mod ast;
 pub mod environment;
 use environment::Environment;
@@ -236,86 +240,37 @@ pub enum RuntimeError {
 }
 
 fn report_error(path: &str, source: &str, e: Error) {
-    match e {
+    let mut files = SimpleFiles::new();
+    let file_id = files.add(path, source);
+    let diagnostic = match e {
         Error::Parse(ParseError::UnrecognizedToken {
             token: (start, _, end),
             expected,
         }) => {
-            let location = ast::Location { start, end };
-            let report = get_source_at_location(source, location);
-            eprintln!(
-                "error: unrecognized token; expected one of {}",
-                expected.join(", ")
-            );
-            eprintln!("{}:{}:{}", path, report.line, report.start);
-            report_offender(report);
+            Diagnostic::error()
+                .with_message("unrecognized token")
+                .with_notes(expected)
+                .with_labels(vec![Label::primary(file_id, start..end)])
         }
         Error::Parse(ParseError::InvalidToken { location: start }) => {
-            let location = ast::Location {
-                start,
-                end: start + 1,
-            };
-            let report = get_source_at_location(source, location);
-            eprintln!("error: invalid token");
-            eprintln!("{}:{}:{}", path, report.line, report.start);
-            report_offender(report);
+            Diagnostic::error()
+                .with_message("invalid token")
+                .with_labels(vec![Label::primary(file_id, start..start+1)])
         }
         Error::Runtime(RuntimeError::IdentifierNotFound { name, location }) => {
-            let report = get_source_at_location(source, location);
-            eprintln!("error: identifier '{}' not found", name);
-            eprintln!("{}:{}:{}", path, report.line, report.start);
-            report_offender(report);
+            Diagnostic::error()
+                .with_message(format!("identifier '{}' not found", name))
+                .with_labels(vec![Label::primary(file_id, location.start..location.end)])
         }
-        Error::Assert{ location } => {
-            let report = get_source_at_location(source, location);
-            eprintln!("assertion failed");
-            eprintln!("{}:{}:{}", path, report.line, report.start);
-            report_offender(report);
+        Error::Assert { location } => {
+            Diagnostic::error()
+                .with_message("assertion failed")
+                .with_labels(vec![Label::primary(file_id, location.start..location.end)])
         }
-        _ => {
-            eprintln!("{:?}", e);
-        }
-    }
-}
+        error => Diagnostic::error().with_message(format!("{:?}", error)),
+    };
 
-fn report_offender(report: ReportLocation) {
-    eprintln!("{}", report.text);
-    eprintln!(
-        "{:>offset$}{:^>length$}",
-        "",
-        "^",
-        offset = report.start - 1,
-        length = report.end - report.start + 1
-    );
-}
-
-struct ReportLocation<'a> {
-    line: usize,
-    text: &'a str,
-    start: usize,
-    end: usize,
-}
-
-fn get_source_at_location(source: &str, location: ast::Location) -> ReportLocation {
-    let mut lines: Vec<(usize, &str)> = Vec::new();
-    let mut offset = 0;
-    for s in source.split('\n') {
-        lines.push((offset, s));
-        offset += s.len() + 1;
-    }
-
-    let mut line = 1;
-    for (x, s) in lines {
-        if x + s.len() > location.start {
-            return ReportLocation {
-                line: line,
-                text: s,
-                start: location.start - x + 1,
-                end: location.end - x,
-            };
-        }
-        line += 1;
-    }
-
-    panic!();
+    let writer = StandardStream::stderr(ColorChoice::Auto);
+    let config = codespan_reporting::term::Config::default();
+    let _ = codespan_reporting::term::emit(&mut writer.lock(), &config, &files, &diagnostic);
 }
