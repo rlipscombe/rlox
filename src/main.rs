@@ -25,17 +25,33 @@ fn main() {
     match interpret_source(source, &mut environment) {
         Ok(_) => {}
         Err(e) => match e {
-            Error::Parse(ParseError::UnrecognizedToken{token:(start,_, end), expected}) => {
+            Error::Parse(ParseError::UnrecognizedToken {
+                token: (start, _, end),
+                expected,
+            }) => {
                 let location = ast::Location { start, end };
                 if let Some(report) = get_source_at_location(source, location) {
                     eprintln!(
                         "{}: unrecognized token at line {}:{}; expected one of {}",
-                        path, report.line, report.start, expected.join(", ")
+                        path,
+                        report.line,
+                        report.start,
+                        expected.join(", ")
                     );
                     eprintln!("{}", report.text);
-                    eprintln!("{:>offset$}{:^>length$}", "", "^", offset = report.start - 1, length = report.end - report.start + 1);
+                    eprintln!(
+                        "{:>offset$}{:^>length$}",
+                        "",
+                        "^",
+                        offset = report.start - 1,
+                        length = report.end - report.start + 1
+                    );
                 } else {
-                    eprintln!("{}: unrecognized token; expected one of {}", path, expected.join(", "));
+                    eprintln!(
+                        "{}: unrecognized token; expected one of {}",
+                        path,
+                        expected.join(", ")
+                    );
                 }
             }
             Error::Runtime(RuntimeError::IdentifierNotFound { name, location }) => {
@@ -45,7 +61,13 @@ fn main() {
                         path, name, report.line, report.start
                     );
                     eprintln!("{}", report.text);
-                    eprintln!("{:>offset$}{:^>length$}", "", "^", offset = report.start - 1, length = report.end - report.start + 1);
+                    eprintln!(
+                        "{:>offset$}{:^>length$}",
+                        "",
+                        "^",
+                        offset = report.start - 1,
+                        length = report.end - report.start + 1
+                    );
                 } else {
                     eprintln!("{}: identifier '{}' not found", path, name);
                 }
@@ -64,10 +86,7 @@ struct ReportLocation<'a> {
     end: usize,
 }
 
-fn get_source_at_location(
-    source: &str,
-    location: ast::Location,
-) -> Option<ReportLocation> {
+fn get_source_at_location(source: &str, location: ast::Location) -> Option<ReportLocation> {
     let mut lines: Vec<(usize, &str)> = Vec::new();
     let mut offset = 0;
     for s in source.split('\n') {
@@ -78,7 +97,12 @@ fn get_source_at_location(
     let mut line = 1;
     for (x, s) in lines {
         if x + s.len() > location.start {
-            let report = ReportLocation { line: line, text: s, start: location.start - x + 1, end: location.end - x };
+            let report = ReportLocation {
+                line: line,
+                text: s,
+                start: location.start - x + 1,
+                end: location.end - x,
+            };
             return Some(report);
         }
         line += 1;
