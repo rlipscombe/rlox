@@ -97,12 +97,9 @@ fn interpret_statement<'s, 'e>(
             do_print(evaluate(*e, environment)?);
             Ok(())
         }
-        Assert {
-            expr,
-            location,
-        } => match evaluate(*expr, environment)? {
-            Value::Nil => Err(Error::Assert{ location }),
-            Value::Boolean(false) => Err(Error::Assert{ location }),
+        Assert { expr, location } => match evaluate(*expr, environment)? {
+            Value::Nil => Err(Error::Assert { location }),
+            Value::Boolean(false) => Err(Error::Assert { location }),
             _ => Ok(()),
         },
         VarDecl(i, e) => {
@@ -110,9 +107,7 @@ fn interpret_statement<'s, 'e>(
             environment.define(&i, value);
             Ok(())
         }
-        Block(statements) => {
-            interpret_statements(statements, environment)
-        }
+        Block(statements) => interpret_statements(statements, environment),
     }
 }
 
@@ -213,7 +208,10 @@ fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     }
 }
 
-pub fn evaluate<'s, 'e>(expr: ast::Expr, environment: &'e mut Environment) -> Result<Value, Error<'s>> {
+pub fn evaluate<'s, 'e>(
+    expr: ast::Expr,
+    environment: &'e mut Environment,
+) -> Result<Value, Error<'s>> {
     match expr {
         ast::Expr::Nil => Ok(Value::Nil),
         ast::Expr::Number(n) => Ok(Value::Number(n)),
@@ -264,7 +262,7 @@ type ParseError<'s> = lalrpop_util::ParseError<usize, lox::Token<'s>, &'s str>;
 pub enum Error<'s> {
     Parse(ParseError<'s>),
     Runtime(RuntimeError),
-    Assert{ location: ast::Location },
+    Assert { location: ast::Location },
 }
 
 #[derive(Debug, PartialEq)]
