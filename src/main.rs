@@ -30,7 +30,7 @@ fn main() {
     }
     print x;
 
-    // This next line has an error.
+    // This next line has an error: height is undefined.
     var volume = PI * r * r * height;
     print volume;
     "#;
