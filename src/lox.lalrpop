@@ -20,9 +20,15 @@ VarDecl: Stmt = {
     "var" <i:Identifier> ";" => Stmt::VarDecl(i.to_string(), Box::new(Expr::Nil)),
 }
 
-pub Statement = { ExprStmt, PrintStmt, }
+pub Statement = {
+    ExprStmt,
+    PrintStmt,
+    Block
+}
+
 ExprStmt: Stmt = <Expr> ";" => Stmt::Expr(Box::new(<>));
 PrintStmt: Stmt = "print" <Expr> ";" => Stmt::Print(Box::new(<>));
+Block: Stmt = "{" <Declaration*> "}" => Stmt::Block(<>);
 
 pub Expr = Assignment;
 

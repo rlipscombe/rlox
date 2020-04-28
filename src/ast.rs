@@ -52,6 +52,7 @@ pub enum Stmt {
     Expr(Box<Expr>),
     Print(Box<Expr>),
     VarDecl(String, Box<Expr>),
+    Block(Vec<Stmt>),
 }
 
 pub fn location(s: usize, e: usize) -> Location {

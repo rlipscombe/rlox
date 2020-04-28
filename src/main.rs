@@ -9,14 +9,27 @@ pub mod ast;
 fn main() {
     let path = "<verbatim>";
     let source = r#"
+    // String catenation
     var greeting = "Hello";
     var recipient = "World!";
     print greeting + " " + recipient;
+
+    // Area of a circle
     var PI = 3.1415;    // vardecl w/ initializer
     var r;  // test vardecl w/o initializer
     r = 3;  // test assignment
     var area = PI * r * r;
     print area;
+
+    // Assignment should be right-associative
+    var x;
+    {
+        // BLOCK:
+        var y;
+        x = y = 42;
+    }
+    print x;
+
     // This next line has an error.
     var volume = PI * r * r * height;
     print volume;
@@ -91,6 +104,9 @@ fn interpret_statement<'s, 'e>(
             let value = evaluate(*e, environment)?;
             environment.define(&i, value);
             Ok(())
+        }
+        Block(statements) => {
+            interpret_statements(statements, environment)
         }
     }
 }
