@@ -16,6 +16,7 @@ fn main() {
     var r = 2;
     var area = PI * r * r;
     print area;
+    // This next line has an error.
     var volume = PI * r * r * height;
     print volume;
     "#;
@@ -23,6 +24,19 @@ fn main() {
     match interpret_source(source, &mut environment) {
         Ok(_) => {}
         Err(e) => match e {
+            Error::Parse(ParseError::UnrecognizedToken{token:(start,_, end), expected}) => {
+                let location = (start, end);
+                if let Some((line_num, line, offset)) = get_source_at_location(source, location) {
+                    eprintln!(
+                        "{}: unrecognized token at line {}:{}:{}; expected one of {}",
+                        path, line_num, offset.0, offset.1, expected.join(", ")
+                    );
+                    eprintln!("{}", line);
+                    eprintln!("{:>offset$}{:^>length$}", "", "^", offset = offset.0 - 1, length = offset.1 - offset.0 + 1);
+                } else {
+                    eprintln!("{}: unrecognized token; expected one of {}", path, expected.join(", "));
+                }
+            }
             Error::Runtime(RuntimeError::IdentifierNotFound { name, location }) => {
                 if let Some((line_num, line, offset)) = get_source_at_location(source, location) {
                     eprintln!(
