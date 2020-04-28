@@ -51,6 +51,7 @@ pub enum BinaryOp {
 pub enum Stmt {
     Expr(Box<Expr>),
     Print(Box<Expr>),
+    Assert { expr: Box<Expr>, location: Location },
     VarDecl(String, Box<Expr>),
     Block(Vec<Stmt>),
 }

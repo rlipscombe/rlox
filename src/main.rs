@@ -30,6 +30,27 @@ fn main() {
     }
     print x;
 
+    // Scoping
+    var a = "global a";
+    var b = "global b";
+    var c = "global c";
+    {
+      var a = "outer a";
+      var b = "outer b";
+      {
+        var a = "inner a";
+        assert a == "inner a";
+        assert b == "outer b";
+        assert c == "global c";
+      }
+      assert a == "outer a";
+      assert b == "outer b";
+      assert c == "global c";
+    }
+    assert a == "global a";
+    assert b == "global b";
+    assert c == "global c";
+
     // This next line has an error: height is undefined.
     var volume = PI * r * r * height;
     print volume;
@@ -100,6 +121,14 @@ fn interpret_statement<'s, 'e>(
             do_print(evaluate(*e, environment)?);
             Ok(())
         }
+        Assert {
+            expr,
+            location,
+        } => match evaluate(*expr, environment)? {
+            Value::Nil => Err(Error::Assert{ location }),
+            Value::Boolean(false) => Err(Error::Assert{ location }),
+            _ => Ok(()),
+        },
         VarDecl(i, e) => {
             let value = evaluate(*e, environment)?;
             environment.define(&i, value);
@@ -258,6 +287,7 @@ type ParseError<'s> = lalrpop_util::ParseError<usize, lox::Token<'s>, &'s str>;
 enum Error<'s> {
     Parse(ParseError<'s>),
     Runtime(RuntimeError),
+    Assert{ location: ast::Location },
 }
 
 #[derive(Debug, PartialEq)]
@@ -450,6 +480,12 @@ fn report_error(path: &str, source: &str, e: Error) {
         Error::Runtime(RuntimeError::IdentifierNotFound { name, location }) => {
             let report = get_source_at_location(source, location);
             eprintln!("error: identifier '{}' not found", name);
+            eprintln!("{}:{}:{}", path, report.line, report.start);
+            report_offender(report);
+        }
+        Error::Assert{ location } => {
+            let report = get_source_at_location(source, location);
+            eprintln!("assertion failed");
             eprintln!("{}:{}:{}", path, report.line, report.start);
             report_offender(report);
         }
