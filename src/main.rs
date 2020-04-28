@@ -197,6 +197,7 @@ fn do_mod<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
 fn do_eq<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l == r)),
+        (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l == r)),
         _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
