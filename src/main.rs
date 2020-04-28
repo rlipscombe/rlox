@@ -18,77 +18,77 @@ enum Value {
 fn do_add<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
-        _ => Err(Error::Runtime)
+        _ => Err(Error::Runtime),
     }
 }
 
 fn do_sub<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l - r)),
-        _ => Err(Error::Runtime)
+        _ => Err(Error::Runtime),
     }
 }
 
 fn do_mul<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l * r)),
-        _ => Err(Error::Runtime)
+        _ => Err(Error::Runtime),
     }
 }
 
 fn do_div<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l / r)),
-        _ => Err(Error::Runtime)
+        _ => Err(Error::Runtime),
     }
 }
 
 fn do_mod<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l % r)),
-        _ => Err(Error::Runtime)
+        _ => Err(Error::Runtime),
     }
 }
 
 fn do_eq<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l == r)),
-        _ => Err(Error::Runtime)
+        _ => Err(Error::Runtime),
     }
 }
 
 fn do_ne<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l != r)),
-        _ => Err(Error::Runtime)
+        _ => Err(Error::Runtime),
     }
 }
 
 fn do_lt<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l < r)),
-        _ => Err(Error::Runtime)
+        _ => Err(Error::Runtime),
     }
 }
 
 fn do_le<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l <= r)),
-        _ => Err(Error::Runtime)
+        _ => Err(Error::Runtime),
     }
 }
 
 fn do_gt<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l > r)),
-        _ => Err(Error::Runtime)
+        _ => Err(Error::Runtime),
     }
 }
 
 fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l >= r)),
-        _ => Err(Error::Runtime)
+        _ => Err(Error::Runtime),
     }
 }
 
@@ -97,21 +97,19 @@ fn evaluate<'s>(expr: Box<ast::Expr>) -> Result<Value, Error<'s>> {
         ast::Expr::Nil => Ok(Value::Nil),
         ast::Expr::Number(n) => Ok(Value::Number(n)),
         ast::Expr::Boolean(b) => Ok(Value::Boolean(b)),
-        ast::Expr::Binary(l, o, r) => {
-            match o {
-                ast::BinaryOp::Add => { do_add(evaluate(l)?, evaluate(r)?) }
-                ast::BinaryOp::Sub => { do_sub(evaluate(l)?, evaluate(r)?) }
-                ast::BinaryOp::Mul => { do_mul(evaluate(l)?, evaluate(r)?) }
-                ast::BinaryOp::Div => { do_div(evaluate(l)?, evaluate(r)?) }
-                ast::BinaryOp::Mod => { do_mod(evaluate(l)?, evaluate(r)?) }
-                ast::BinaryOp::Eq => { do_eq(evaluate(l)?, evaluate(r)?) }
-                ast::BinaryOp::Ne => { do_ne(evaluate(l)?, evaluate(r)?) }
-                ast::BinaryOp::Lt => { do_lt(evaluate(l)?, evaluate(r)?) }
-                ast::BinaryOp::Le => { do_le(evaluate(l)?, evaluate(r)?) }
-                ast::BinaryOp::Gt => { do_gt(evaluate(l)?, evaluate(r)?) }
-                ast::BinaryOp::Ge => { do_ge(evaluate(l)?, evaluate(r)?) }
-            }
-        }
+        ast::Expr::Binary(l, o, r) => match o {
+            ast::BinaryOp::Add => do_add(evaluate(l)?, evaluate(r)?),
+            ast::BinaryOp::Sub => do_sub(evaluate(l)?, evaluate(r)?),
+            ast::BinaryOp::Mul => do_mul(evaluate(l)?, evaluate(r)?),
+            ast::BinaryOp::Div => do_div(evaluate(l)?, evaluate(r)?),
+            ast::BinaryOp::Mod => do_mod(evaluate(l)?, evaluate(r)?),
+            ast::BinaryOp::Eq => do_eq(evaluate(l)?, evaluate(r)?),
+            ast::BinaryOp::Ne => do_ne(evaluate(l)?, evaluate(r)?),
+            ast::BinaryOp::Lt => do_lt(evaluate(l)?, evaluate(r)?),
+            ast::BinaryOp::Le => do_le(evaluate(l)?, evaluate(r)?),
+            ast::BinaryOp::Gt => do_gt(evaluate(l)?, evaluate(r)?),
+            ast::BinaryOp::Ge => do_ge(evaluate(l)?, evaluate(r)?),
+        },
     }
 }
 
@@ -120,13 +118,12 @@ type ParseError<'s> = lalrpop_util::ParseError<usize, lox::Token<'s>, &'s str>;
 #[derive(Debug, PartialEq)]
 enum Error<'s> {
     Parse(ParseError<'s>),
-    Runtime
+    Runtime,
 }
-
 
 fn parse_string(source: &str) -> Result<Box<ast::Expr>, Error> {
     let parser = lox::ExprParser::new();
-    parser.parse(source).map_err(|e| { Error::Parse(e) })
+    parser.parse(source).map_err(|e| Error::Parse(e))
 }
 
 fn evaluate_string(source: &str) -> Result<Value, Error> {
@@ -163,7 +160,10 @@ fn negate_number() {
 
 #[test]
 fn simple_addition() {
-    assert_eq!(Ok(Value::Number(1234.0 + 67.0)), evaluate_string("1234 + 67"));
+    assert_eq!(
+        Ok(Value::Number(1234.0 + 67.0)),
+        evaluate_string("1234 + 67")
+    );
 }
 
 #[test]
