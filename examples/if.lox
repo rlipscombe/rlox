@@ -1,0 +1,5 @@
+var cond = 3 > 2;
+if (cond) {
+    print("OK");
+    assert true;
+}
