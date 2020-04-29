@@ -33,13 +33,13 @@ PrintStmt: Stmt = "print" <Expr> ";" => Stmt::Print(Box::new(<>));
 AssertStmt: Stmt = "assert" <s:@L> <expr:Expr> <e:@L>";" => Stmt::Assert{ expr: Box::new(expr), location: location(s, e) };
 Block: Stmt = "{" <Declaration*> "}" => Stmt::Block(<>);
 
-// We have to be careful with "if" statements, so that we don't introduce
-// an ambiguity in the grammar.
-// See https://github.com/lalrpop/lalrpop/issues/386
-// and https://www.cs.cornell.edu/andru/javaspec/19.doc.html
+// To avoid ambiguity in the grammar (see https://github.com/lalrpop/lalrpop/issues/386),
+// we'll require that the 'if' statement take block statements.
 IfStmt: Stmt = {
-    "if" "(" <Expr> ")" <Statement>,
-    "if" "(" <Expr> ")" <Statement> "else" <Statement>
+    "if" "(" <cond:Expr> ")" <then:Block>
+        => Stmt::If{ cond: cond, then: Box::new(then), else_: Box::new(Stmt::Empty) },
+    "if" "(" <cond:Expr> ")" <then:Block> "else" <else_:Block>
+        => Stmt::If{ cond: cond, then: Box::new(then), else_: Box::new(else_) }
 }
 
 pub Expr = Assignment;
