@@ -55,6 +55,7 @@ fn interpret_statement<'s>(
 ) -> Result<(), Error<'s>> {
     use ast::Stmt::*;
     match statement {
+        Empty => Ok(()),
         Expr(e) => {
             evaluate(*e, environment)?;
             Ok(())
@@ -78,6 +79,20 @@ fn interpret_statement<'s>(
             let result = interpret_statements(statements, environment);
             environment.pop();
             result
+        }
+        If { cond, then, else_ } => {
+            match evaluate(cond, environment) {
+                Ok(Value::Boolean(true)) => {
+                    interpret_statement(*then, environment)
+                }
+                Ok(Value::Boolean(false)) => {
+                    interpret_statement(*else_, environment)
+                }
+                Ok(_) => {
+                    Err(Error::Runtime(RuntimeError::TypeMismatch))
+                }
+                Err(e) => Err(e)
+            }
         }
     }
 }

@@ -49,11 +49,13 @@ pub enum BinaryOp {
 
 #[derive(Debug, PartialEq)]
 pub enum Stmt {
+    Empty,
     Expr(Box<Expr>),
     Print(Box<Expr>),
     Assert { expr: Box<Expr>, location: Location },
     VarDecl(String, Box<Expr>),
     Block(Vec<Stmt>),
+    If { cond: Expr, then: Box<Stmt>, else_: Box<Stmt> },
 }
 
 pub fn location(s: usize, e: usize) -> Location {
