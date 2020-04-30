@@ -265,11 +265,11 @@ fn report_error(path: &str, source: &str, e: Error) {
     let file_id = files.add(path, source);
     let diagnostic = match e {
         Error::Parse(ParseError::UnrecognizedToken {
-            token: (start, _, end),
+            token: (start, tok, end),
             expected,
         }) => Diagnostic::error()
-            .with_message("unrecognized token")
-            .with_notes(expected)
+            .with_message(format!("unrecognized token '{}'", tok))
+            .with_notes(expected_one_of(expected))
             .with_labels(vec![Label::primary(file_id, start..end)]),
         Error::Parse(ParseError::InvalidToken { location: start }) => Diagnostic::error()
             .with_message("invalid token")
@@ -286,4 +286,13 @@ fn report_error(path: &str, source: &str, e: Error) {
     let writer = StandardStream::stderr(ColorChoice::Auto);
     let config = codespan_reporting::term::Config::default();
     let _ = codespan_reporting::term::emit(&mut writer.lock(), &config, &files, &diagnostic);
+}
+
+fn expected_one_of(expected: Vec<String>) -> Vec<String> {
+    if expected.len() == 1 {
+        vec![format!("expected {}", expected[0])]
+    }
+    else {
+        vec![format!("expected one of {}", expected.join(", "))]
+    }
 }
