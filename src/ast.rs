@@ -50,13 +50,23 @@ pub enum BinaryOp {
 #[derive(Debug, PartialEq)]
 pub enum Stmt {
     Empty,
-    Expr(Box<Expr>),
-    Print(Box<Expr>),
-    Assert { expr: Box<Expr>, location: Location },
-    VarDecl(String, Box<Expr>),
+    Expr(Expr),
+    Print(Expr),
+    Assert {
+        expr: Expr,
+        location: Location,
+    },
+    VarDecl(String, Expr),
     Block(Vec<Stmt>),
-    If { cond: Expr, then: Box<Stmt>, else_: Box<Stmt> },
-    While { cond: Expr, body: Box<Stmt> },
+    If {
+        cond: Expr,
+        then: Box<Stmt>,
+        else_: Box<Stmt>,
+    },
+    While {
+        cond: Expr,
+        body: Box<Stmt>,
+    },
 }
 
 pub fn location(s: usize, e: usize) -> Location {
