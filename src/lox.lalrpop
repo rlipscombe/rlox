@@ -22,6 +22,7 @@ VarDecl: Stmt = {
 
 pub Statement = {
     ExprStmt,
+    ForStmt,
     IfStmt,
     PrintStmt,
     WhileStmt,
@@ -33,6 +34,25 @@ ExprStmt: Stmt = <Expr> ";" => Stmt::Expr(<>);
 PrintStmt: Stmt = "print" <Expr> ";" => Stmt::Print(<>);
 AssertStmt: Stmt = "assert" <s:@L> <expr:Expr> <e:@L>";" => Stmt::Assert{ expr: expr, location: location(s, e) };
 Block: Stmt = "{" <Declaration*> "}" => Stmt::Block(<>);
+
+ForStmt: Stmt =
+    "for" "(" <init:ForInit> <cond:ForCond> <incr:ForIncr> ")" <body:Block>
+        => desugar_for(init, cond, incr, body);
+ForInit: Stmt = {
+    <VarDecl> => <>,
+    <ExprStmt> => <>,
+    ";" => Stmt::Empty
+}
+
+ForCond: Expr = {
+    <Expr> ";" => <>,
+    ";" => Expr::Boolean(true)
+}
+
+ForIncr: Expr = {
+    <Expr>,
+    () => Expr::Nil
+};
 
 // To avoid ambiguity in the grammar (see https://github.com/lalrpop/lalrpop/issues/386),
 // we'll require that the 'if' statement take block statements.

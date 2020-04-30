@@ -72,3 +72,15 @@ pub enum Stmt {
 pub fn location(s: usize, e: usize) -> Location {
     Location { start: s, end: e }
 }
+
+pub fn desugar_for(init: Stmt, cond: Expr, incr: Expr, body: Stmt) -> Stmt {
+    Stmt::Block(vec![
+        init,
+        Stmt::While {
+            cond: cond,
+            body: Box::new(Stmt::Block(vec![
+                body,
+                Stmt::Expr(incr)])),
+        },
+    ])
+}
