@@ -24,6 +24,7 @@ pub Statement = {
     ExprStmt,
     IfStmt,
     PrintStmt,
+    WhileStmt,
     AssertStmt,
     Block
 }
@@ -41,6 +42,12 @@ IfStmt: Stmt = {
     "if" "(" <cond:Expr> ")" <then:Block> "else" <else_:Block>
         => Stmt::If{ cond: cond, then: Box::new(then), else_: Box::new(else_) }
 }
+
+// For consistency, we'll require that the 'while' statement also take block statements.
+// TODO: When we allow 'if' to take plain statements, we should fix this as well.
+WhileStmt: Stmt =
+    "while" "(" <cond:Expr> ")" <body:Block>
+        => Stmt::While{ cond: cond, body: Box::new(body) };
 
 pub Expr = Assignment;
 

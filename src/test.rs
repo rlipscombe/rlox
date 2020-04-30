@@ -11,7 +11,7 @@ fn parse_string(source: &str) -> Result<ast::Expr, Error> {
 fn evaluate_string(source: &str) -> Result<Value, Error> {
     let result = parse_string(source);
     let mut environment = Environment::new();
-    result.and_then(|expr| evaluate(expr, &mut environment))
+    result.and_then(|expr| evaluate(&expr, &mut environment))
 }
 
 #[test]

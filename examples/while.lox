@@ -1,0 +1,10 @@
+var i = 0;
+while (i < 5) {
+    print i;
+    i = i + 1;
+}
+assert i == 5;
+
+while (false) {
+    assert false;
+}

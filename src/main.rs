@@ -30,47 +30,44 @@ fn main() {
     };
 }
 
-fn interpret_source<'s>(
-    source: &'s str,
-    environment: &mut Environment,
-) -> Result<(), Error<'s>> {
+fn interpret_source<'s>(source: &'s str, environment: &mut Environment) -> Result<(), Error<'s>> {
     let parser = lox::ProgramParser::new();
     let program = parser.parse(source).map_err(|e| Error::Parse(e))?;
-    interpret_statements(program, environment)
+    interpret_statements(&program, environment)
 }
 
 fn interpret_statements<'s>(
-    statements: Vec<ast::Stmt>,
+    statements: &Vec<ast::Stmt>,
     environment: &mut Environment,
 ) -> Result<(), Error<'s>> {
     for s in statements {
-        interpret_statement(s, environment)?;
+        interpret_statement(&s, environment)?;
     }
     Ok(())
 }
 
 fn interpret_statement<'s>(
-    statement: ast::Stmt,
+    statement: &ast::Stmt,
     environment: &mut Environment,
 ) -> Result<(), Error<'s>> {
     use ast::Stmt::*;
     match statement {
         Empty => Ok(()),
         Expr(e) => {
-            evaluate(*e, environment)?;
+            evaluate(&e, environment)?;
             Ok(())
         }
         Print(e) => {
-            do_print(evaluate(*e, environment)?);
+            do_print(evaluate(&e, environment)?);
             Ok(())
         }
-        Assert { expr, location } => match evaluate(*expr, environment)? {
-            Value::Nil => Err(Error::Assert { location }),
-            Value::Boolean(false) => Err(Error::Assert { location }),
+        Assert { expr, location } => match evaluate(&expr, environment)? {
+            Value::Nil => Err(Error::Assert { location: *location }),
+            Value::Boolean(false) => Err(Error::Assert { location: *location }),
             _ => Ok(()),
         },
         VarDecl(i, e) => {
-            let value = evaluate(*e, environment)?;
+            let value = evaluate(&e, environment)?;
             environment.define(&i, value);
             Ok(())
         }
@@ -80,20 +77,26 @@ fn interpret_statement<'s>(
             environment.pop();
             result
         }
-        If { cond, then, else_ } => {
-            match evaluate(cond, environment) {
+        If { cond, then, else_ } => match evaluate(&cond, environment) {
+            Ok(Value::Boolean(true)) => interpret_statement(then, environment),
+            Ok(Value::Boolean(false)) => interpret_statement(else_, environment),
+            Ok(_) => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+            Err(e) => Err(e),
+        },
+        While { cond, body } => loop {
+            match evaluate(&cond, environment) {
                 Ok(Value::Boolean(true)) => {
-                    interpret_statement(*then, environment)
+                    interpret_statement(&body, environment)?;
                 }
                 Ok(Value::Boolean(false)) => {
-                    interpret_statement(*else_, environment)
+                    return Ok(());
                 }
                 Ok(_) => {
-                    Err(Error::Runtime(RuntimeError::TypeMismatch))
+                    return Err(Error::Runtime(RuntimeError::TypeMismatch));
                 }
-                Err(e) => Err(e)
+                Err(e) => return Err(e),
             }
-        }
+        },
     }
 }
 
@@ -194,49 +197,46 @@ fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     }
 }
 
-pub fn evaluate<'s>(
-    expr: ast::Expr,
-    environment: &mut Environment,
-) -> Result<Value, Error<'s>> {
+pub fn evaluate<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
     match expr {
         ast::Expr::Nil => Ok(Value::Nil),
-        ast::Expr::Number(n) => Ok(Value::Number(n)),
-        ast::Expr::Boolean(b) => Ok(Value::Boolean(b)),
-        ast::Expr::String(s) => Ok(Value::String(s)),
+        ast::Expr::Number(n) => Ok(Value::Number(*n)),
+        ast::Expr::Boolean(b) => Ok(Value::Boolean(*b)),
+        ast::Expr::String(s) => Ok(Value::String(s.into())),
         ast::Expr::Unary(o, r) => match o {
-            ast::UnaryOp::Invert => match evaluate(*r, environment)? {
+            ast::UnaryOp::Invert => match evaluate(r, environment)? {
                 Value::Boolean(b) => Ok(Value::Boolean(!b)),
                 _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
             },
-            ast::UnaryOp::Negate => match evaluate(*r, environment)? {
+            ast::UnaryOp::Negate => match evaluate(r, environment)? {
                 Value::Number(n) => Ok(Value::Number(-n)),
                 _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
             },
         },
         ast::Expr::Binary(l, o, r) => match o {
-            ast::BinaryOp::Add => do_add(evaluate(*l, environment)?, evaluate(*r, environment)?),
-            ast::BinaryOp::Sub => do_sub(evaluate(*l, environment)?, evaluate(*r, environment)?),
-            ast::BinaryOp::Mul => do_mul(evaluate(*l, environment)?, evaluate(*r, environment)?),
-            ast::BinaryOp::Div => do_div(evaluate(*l, environment)?, evaluate(*r, environment)?),
-            ast::BinaryOp::Mod => do_mod(evaluate(*l, environment)?, evaluate(*r, environment)?),
-            ast::BinaryOp::Eq => do_eq(evaluate(*l, environment)?, evaluate(*r, environment)?),
-            ast::BinaryOp::Ne => do_ne(evaluate(*l, environment)?, evaluate(*r, environment)?),
-            ast::BinaryOp::Lt => do_lt(evaluate(*l, environment)?, evaluate(*r, environment)?),
-            ast::BinaryOp::Le => do_le(evaluate(*l, environment)?, evaluate(*r, environment)?),
-            ast::BinaryOp::Gt => do_gt(evaluate(*l, environment)?, evaluate(*r, environment)?),
-            ast::BinaryOp::Ge => do_ge(evaluate(*l, environment)?, evaluate(*r, environment)?),
+            ast::BinaryOp::Add => do_add(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Sub => do_sub(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Mul => do_mul(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Div => do_div(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Mod => do_mod(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Eq => do_eq(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Ne => do_ne(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Lt => do_lt(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Le => do_le(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Gt => do_gt(evaluate(l, environment)?, evaluate(r, environment)?),
+            ast::BinaryOp::Ge => do_ge(evaluate(l, environment)?, evaluate(r, environment)?),
         },
         ast::Expr::Var { name, location } => environment
             .get(&name)
-            .ok_or_else(|| Error::Runtime(RuntimeError::IdentifierNotFound { name, location })),
+            .ok_or_else(|| Error::Runtime(RuntimeError::IdentifierNotFound { name: name.into(), location: *location })),
         ast::Expr::Assignment {
             name,
             rhs,
             location,
         } => {
-            let value = evaluate(*rhs, environment)?;
+            let value = evaluate(rhs, environment)?;
             environment.assign(&name, value).or(Err(Error::Runtime(
-                RuntimeError::IdentifierNotFound { name, location },
+                RuntimeError::IdentifierNotFound { name: name.into(), location: *location },
             )))
         }
     }
@@ -267,27 +267,19 @@ fn report_error(path: &str, source: &str, e: Error) {
         Error::Parse(ParseError::UnrecognizedToken {
             token: (start, _, end),
             expected,
-        }) => {
-            Diagnostic::error()
-                .with_message("unrecognized token")
-                .with_notes(expected)
-                .with_labels(vec![Label::primary(file_id, start..end)])
-        }
-        Error::Parse(ParseError::InvalidToken { location: start }) => {
-            Diagnostic::error()
-                .with_message("invalid token")
-                .with_labels(vec![Label::primary(file_id, start..start+1)])
-        }
-        Error::Runtime(RuntimeError::IdentifierNotFound { name, location }) => {
-            Diagnostic::error()
-                .with_message(format!("identifier '{}' not found", name))
-                .with_labels(vec![Label::primary(file_id, location.start..location.end)])
-        }
-        Error::Assert { location } => {
-            Diagnostic::error()
-                .with_message("assertion failed")
-                .with_labels(vec![Label::primary(file_id, location.start..location.end)])
-        }
+        }) => Diagnostic::error()
+            .with_message("unrecognized token")
+            .with_notes(expected)
+            .with_labels(vec![Label::primary(file_id, start..end)]),
+        Error::Parse(ParseError::InvalidToken { location: start }) => Diagnostic::error()
+            .with_message("invalid token")
+            .with_labels(vec![Label::primary(file_id, start..start + 1)]),
+        Error::Runtime(RuntimeError::IdentifierNotFound { name, location }) => Diagnostic::error()
+            .with_message(format!("identifier '{}' not found", name))
+            .with_labels(vec![Label::primary(file_id, location.start..location.end)]),
+        Error::Assert { location } => Diagnostic::error()
+            .with_message("assertion failed")
+            .with_labels(vec![Label::primary(file_id, location.start..location.end)]),
         error => Diagnostic::error().with_message(format!("{:?}", error)),
     };
 

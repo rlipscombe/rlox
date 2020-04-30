@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Location {
     pub start: usize,
     pub end: usize,
@@ -56,6 +56,7 @@ pub enum Stmt {
     VarDecl(String, Box<Expr>),
     Block(Vec<Stmt>),
     If { cond: Expr, then: Box<Stmt>, else_: Box<Stmt> },
+    While { cond: Expr, body: Box<Stmt> },
 }
 
 pub fn location(s: usize, e: usize) -> Location {
