@@ -73,14 +73,21 @@ pub fn location(s: usize, e: usize) -> Location {
     Location { start: s, end: e }
 }
 
-pub fn desugar_for(init: Stmt, cond: Expr, incr: Expr, body: Stmt) -> Stmt {
+pub fn desugar_for(init: Option<Stmt>, cond: Option<Expr>, incr: Option<Expr>, body: Stmt) -> Stmt {
+    desugar_for_(
+        init.unwrap_or(Stmt::Empty),
+        cond.unwrap_or(Expr::Boolean(true)),
+        incr.unwrap_or(Expr::Nil),
+        body,
+    )
+}
+
+pub fn desugar_for_(init: Stmt, cond: Expr, incr: Expr, body: Stmt) -> Stmt {
     Stmt::Block(vec![
         init,
         Stmt::While {
             cond: cond,
-            body: Box::new(Stmt::Block(vec![
-                body,
-                Stmt::Expr(incr)])),
+            body: Box::new(Stmt::Block(vec![body, Stmt::Expr(incr)])),
         },
     ])
 }

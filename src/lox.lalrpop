@@ -38,20 +38,20 @@ Block: Stmt = "{" <Declaration*> "}" => Stmt::Block(<>);
 ForStmt: Stmt =
     "for" "(" <init:ForInit> <cond:ForCond> <incr:ForIncr> ")" <body:Block>
         => desugar_for(init, cond, incr, body);
-ForInit: Stmt = {
-    <VarDecl> => <>,
-    <ExprStmt> => <>,
-    ";" => Stmt::Empty
+ForInit: Option<Stmt> = {
+    <VarDecl> => Some(<>),
+    <ExprStmt> => Some(<>),
+    ";" => None
 }
 
-ForCond: Expr = {
-    <Expr> ";" => <>,
-    ";" => Expr::Boolean(true)
+ForCond: Option<Expr> = {
+    <Expr> ";" => Some(<>),
+    ";" => None
 }
 
-ForIncr: Expr = {
-    <Expr>,
-    () => Expr::Nil
+ForIncr: Option<Expr> = {
+    <Expr> => Some(<>),
+    () => None
 };
 
 // To avoid ambiguity in the grammar (see https://github.com/lalrpop/lalrpop/issues/386),
