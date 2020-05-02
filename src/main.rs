@@ -9,6 +9,8 @@ use codespan_reporting::files::SimpleFiles;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 
 pub mod ast;
+use ast::Locatable;
+
 pub mod environment;
 use environment::Environment;
 
@@ -212,65 +214,100 @@ fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
 
 pub fn evaluate<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
     match expr {
-        ast::Expr::Nil => Ok(Value::Nil),
-        ast::Expr::Number(n) => Ok(Value::Number(*n)),
-        ast::Expr::Boolean(b) => Ok(Value::Boolean(*b)),
-        ast::Expr::String(s) => Ok(Value::String(s.into())),
-        ast::Expr::Unary(o, r) => match o {
-            ast::UnaryOp::Invert => match evaluate(r, environment)? {
+        ast::Expr::Nil { .. } => Ok(Value::Nil),
+        ast::Expr::Number { value, .. } => Ok(Value::Number(*value)),
+        ast::Expr::Boolean { value, .. } => Ok(Value::Boolean(*value)),
+        ast::Expr::String { value, .. } => Ok(Value::String(value.into())),
+        ast::Expr::Unary { op, right, .. } => match op {
+            ast::UnaryOp::Invert => match evaluate(&right, environment)? {
                 Value::Boolean(b) => Ok(Value::Boolean(!b)),
                 _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
             },
-            ast::UnaryOp::Negate => match evaluate(r, environment)? {
+            ast::UnaryOp::Negate => match evaluate(&right, environment)? {
                 Value::Number(n) => Ok(Value::Number(-n)),
                 _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
             },
         },
-        ast::Expr::Binary(l, o, r) => match o {
-            ast::BinaryOp::Add => do_add(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Sub => do_sub(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Mul => do_mul(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Div => do_div(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Mod => do_mod(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Eq => do_eq(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Ne => do_ne(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Lt => do_lt(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Le => do_le(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Gt => do_gt(evaluate(l, environment)?, evaluate(r, environment)?),
-            ast::BinaryOp::Ge => do_ge(evaluate(l, environment)?, evaluate(r, environment)?),
+        ast::Expr::Binary {
+            left, op, right, ..
+        } => match op {
+            ast::BinaryOp::Add => do_add(
+                evaluate(&left, environment)?,
+                evaluate(&right, environment)?,
+            ),
+            ast::BinaryOp::Sub => do_sub(
+                evaluate(&left, environment)?,
+                evaluate(&right, environment)?,
+            ),
+            ast::BinaryOp::Mul => do_mul(
+                evaluate(&left, environment)?,
+                evaluate(&right, environment)?,
+            ),
+            ast::BinaryOp::Div => do_div(
+                evaluate(&left, environment)?,
+                evaluate(&right, environment)?,
+            ),
+            ast::BinaryOp::Mod => do_mod(
+                evaluate(&left, environment)?,
+                evaluate(&right, environment)?,
+            ),
+            ast::BinaryOp::Eq => do_eq(
+                evaluate(&left, environment)?,
+                evaluate(&right, environment)?,
+            ),
+            ast::BinaryOp::Ne => do_ne(
+                evaluate(&left, environment)?,
+                evaluate(&right, environment)?,
+            ),
+            ast::BinaryOp::Lt => do_lt(
+                evaluate(&left, environment)?,
+                evaluate(&right, environment)?,
+            ),
+            ast::BinaryOp::Le => do_le(
+                evaluate(&left, environment)?,
+                evaluate(&right, environment)?,
+            ),
+            ast::BinaryOp::Gt => do_gt(
+                evaluate(&left, environment)?,
+                evaluate(&right, environment)?,
+            ),
+            ast::BinaryOp::Ge => do_ge(
+                evaluate(&left, environment)?,
+                evaluate(&right, environment)?,
+            ),
         },
-        ast::Expr::Var { name, location } => environment.get(&name).ok_or_else(|| {
+        ast::Expr::Var { name, .. } => environment.get(&name).ok_or_else(|| {
             Error::Runtime(RuntimeError::IdentifierNotFound {
                 name: name.into(),
-                location: *location,
+                location: expr.location(),
             })
         }),
-        ast::Expr::Assignment {
-            name,
-            rhs,
-            location,
-        } => {
-            let value = evaluate(rhs, environment)?;
+        ast::Expr::Assignment { name, rhs, .. } => {
+            let value = evaluate(&rhs, environment)?;
             environment.assign(&name, value).or(Err(Error::Runtime(
                 RuntimeError::IdentifierNotFound {
                     name: name.into(),
-                    location: *location,
+                    location: expr.location(),
                 },
             )))
         }
-        ast::Expr::Call(e) => {
-            do_call(evaluate(e, environment)?)
-        }
+        ast::Expr::Call { callee, .. } => do_call(&callee, environment),
     }
 }
 
-fn do_call<'s>(v: Value) -> Result<Value, Error<'s>> {
+fn do_call<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let v = evaluate(expr, environment)?;
     match v {
         Value::NativeFunction(_, f) => {
             let r = f();
             Ok(r)
-        },
-        _ => Err(Error::Runtime(RuntimeError::NotCallable))
+        }
+        _ => {
+            let location = expr.location();
+            Err(Error::Runtime(RuntimeError::NotCallable {
+                location: location,
+            }))
+        }
     }
 }
 
@@ -290,7 +327,9 @@ pub enum RuntimeError {
         name: String,
         location: ast::Location,
     },
-    NotCallable,
+    NotCallable {
+        location: ast::Location,
+    },
 }
 
 fn report_error(path: &str, source: &str, e: Error) {
@@ -314,8 +353,9 @@ fn report_error(path: &str, source: &str, e: Error) {
         Error::Runtime(RuntimeError::TypeMismatch) => {
             Diagnostic::error().with_message("type mismatch")
         }
-        Error::Runtime(RuntimeError::NotCallable) => Diagnostic::error()
-            .with_message("not callable"),
+        Error::Runtime(RuntimeError::NotCallable { location }) => Diagnostic::error()
+            .with_message("not callable")
+            .with_labels(vec![Label::primary(file_id, location)]),
         Error::Assert { location } => Diagnostic::error()
             .with_message("assertion failed")
             .with_labels(vec![Label::primary(file_id, location)]),

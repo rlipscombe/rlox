@@ -12,12 +12,32 @@ impl Into<std::ops::Range<usize>> for Location {
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
-    Nil,
-    Number(f64),
-    Boolean(bool),
-    String(String),
-    Unary(UnaryOp, Box<Expr>),
-    Binary(Box<Expr>, BinaryOp, Box<Expr>),
+    Nil {
+        location: Location,
+    },
+    Number {
+        value: f64,
+        location: Location,
+    },
+    Boolean {
+        value: bool,
+        location: Location,
+    },
+    String {
+        value: String,
+        location: Location,
+    },
+    Unary {
+        op: UnaryOp,
+        right: Box<Expr>,
+        location: Location,
+    },
+    Binary {
+        left: Box<Expr>,
+        op: BinaryOp,
+        right: Box<Expr>,
+        location: Location,
+    },
     Var {
         name: String,
         location: Location,
@@ -27,7 +47,30 @@ pub enum Expr {
         rhs: Box<Expr>,
         location: Location,
     },
-    Call(Box<Expr>)
+    Call {
+        callee: Box<Expr>,
+        location: Location,
+    },
+}
+
+pub trait Locatable {
+    fn location(&self) -> Location;
+}
+
+impl Locatable for Expr {
+    fn location(&self) -> Location {
+        match *self {
+            Expr::Nil { location, ..} => location,
+            Expr::Number { location, ..} => location,
+            Expr::Boolean { location, ..} => location,
+            Expr::String { location, ..} => location,
+            Expr::Unary { location, ..} => location,
+            Expr::Binary { location, ..} => location,
+            Expr::Var { location, ..} => location,
+            Expr::Assignment { location, ..} => location,
+            Expr::Call { location, .. } => location,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -80,11 +123,20 @@ pub fn location(s: usize, e: usize) -> Location {
     Location { start: s, end: e }
 }
 
-pub fn desugar_for(init: Option<Stmt>, cond: Option<Expr>, incr: Option<Expr>, body: Stmt) -> Stmt {
+pub fn desugar_for(
+    location: Location,
+    init: Option<Stmt>,
+    cond: Option<Expr>,
+    incr: Option<Expr>,
+    body: Stmt,
+) -> Stmt {
     desugar_for_(
         init.unwrap_or(Stmt::Empty),
-        cond.unwrap_or(Expr::Boolean(true)),
-        incr.unwrap_or(Expr::Nil),
+        cond.unwrap_or(Expr::Boolean {
+            value: true,
+            location: location,
+        }),
+        incr.unwrap_or(Expr::Nil { location: location }),
         body,
     )
 }

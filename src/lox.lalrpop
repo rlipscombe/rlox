@@ -17,7 +17,7 @@ pub Program = Declaration*;
 Declaration: Stmt = { VarDecl, Statement, }
 VarDecl: Stmt = {
     "var" <i:Identifier> "=" <e:Expr> ";" => Stmt::VarDecl(i.to_string(), e),
-    "var" <i:Identifier> ";" => Stmt::VarDecl(i.to_string(), Expr::Nil),
+    <s:@L> "var" <i:Identifier> <e:@L> ";" => Stmt::VarDecl(i.to_string(), Expr::Nil { location: location(s, e) }),
 }
 
 pub Statement = {
@@ -36,8 +36,8 @@ AssertStmt: Stmt = "assert" <s:@L> <expr:Expr> <e:@L>";" => Stmt::Assert{ expr: 
 Block: Stmt = "{" <Declaration*> "}" => Stmt::Block(<>);
 
 ForStmt: Stmt =
-    "for" "(" <init:ForInit> <cond:ForCond> <incr:ForIncr> ")" <body:Block>
-        => desugar_for(init, cond, incr, body);
+    <s:@L> "for" "(" <init:ForInit> <cond:ForCond> <incr:ForIncr> ")" <e:@L> <body:Block>
+        => desugar_for(location(s, e), init, cond, incr, body);
 ForInit: Option<Stmt> = {
     <VarDecl> => Some(<>),
     <ExprStmt> => Some(<>),
@@ -57,22 +57,35 @@ ForIncr: Option<Expr> = {
 // To avoid ambiguity in the grammar (see https://github.com/lalrpop/lalrpop/issues/386),
 // we'll require that the 'if' statement take block statements.
 IfStmt: Stmt = {
-    "if" "(" <cond:Expr> ")" <then:Block>
-        => Stmt::If{ cond: cond, then: Box::new(then), else_: Box::new(Stmt::Empty) },
-    "if" "(" <cond:Expr> ")" <then:Block> "else" <else_:Block>
-        => Stmt::If{ cond: cond, then: Box::new(then), else_: Box::new(else_) }
+    "if" "(" <cond:Expr> ")" <then:Block> => Stmt::If {
+        cond: cond,
+        then: Box::new(then),
+        else_: Box::new(Stmt::Empty)
+    },
+
+    "if" "(" <cond:Expr> ")" <then:Block> "else" <else_:Block> => Stmt::If {
+        cond: cond,
+        then: Box::new(then),
+        else_: Box::new(else_)
+    }
 }
 
 // For consistency, we'll require that the 'while' statement also take block statements.
 // TODO: When we allow 'if' to take plain statements, we should fix this as well.
 WhileStmt: Stmt =
-    "while" "(" <cond:Expr> ")" <body:Block>
-        => Stmt::While{ cond: cond, body: Box::new(body) };
+    "while" "(" <cond:Expr> ")" <body:Block> => Stmt::While{
+        cond: cond,
+        body: Box::new(body)
+    };
 
 pub Expr = Assignment;
 
 Assignment: Expr = {
-    <s:@L> <i:Identifier> <e:@L> "=" <a:Assignment> => Expr::Assignment { name: i.to_string(), rhs: Box::new(a), location: location(s, e) },
+    <s:@L> <i:Identifier> <e:@L> "=" <a:Assignment> => Expr::Assignment {
+        name: i.to_string(),
+        rhs: Box::new(a),
+        location: location(s, e)
+    },
     Equality
 }
 
@@ -85,8 +98,8 @@ Unary = {
     Call
 }
 Call: Expr = {
-    <Term> "(" ")" => Expr::Call(Box::new(<>)),
-    <Call> "(" ")" => Expr::Call(Box::new(<>))
+    <s:@L> <callee:Term> "(" ")" <e:@L> => Expr::Call { callee: Box::new(callee), location: location(s, e) },
+    <s:@L> <callee:Call> "(" ")" <e:@L> => Expr::Call { callee: Box::new(callee), location: location(s, e) }
 }
 
 EqualityOp: BinaryOp = {
@@ -118,12 +131,15 @@ UnaryOp: UnaryOp = {
 }
 
 Term: Expr = {
-    Num => Expr::Number(<>),
-    Bool => Expr::Boolean(<>),
-    "nil" => Expr::Nil,
-    String => Expr::String(<>),
+    <s:@L> <value:Num> <e:@L> => Expr::Number { value: value, location: location(s, e) },
+    <s:@L> <value:Bool> <e:@L> => Expr::Boolean { value: value, location: location(s, e) },
+    <s:@L> "nil" <e:@L> => Expr::Nil { location: location(s, e) },
+    <s:@L> <value:String> <e:@L> => Expr::String { value: value, location: location(s, e) },
     "(" <Expr> ")",
-    <s:@L> <i:Identifier> <e:@L> => Expr::Var { name: i.to_string(), location: location(s, e) },
+    <s:@L> <i:Identifier> <e:@L> => Expr::Var {
+        name: i.to_string(),
+        location: location(s, e)
+    },
 };
 
 Num: f64 = r"[0-9]+(\.[0-9]+)?" => f64::from_str(<>).unwrap();
@@ -139,11 +155,20 @@ Identifier = r#"[a-zA-Z_][a-zA-Z_0-9]*"#;
 
 // Helpers
 UnaryOperator<Operator, Right, Next>: Expr = {
-    <op:Operator> <right:Right> => Expr::Unary(op, Box::new(right)),
+    <s:@L> <op:Operator> <right:Right> <e:@L> => Expr::Unary {
+        op: op,
+        right: Box::new(right),
+        location: location(s, e)
+    },
     Next
 }
 
 BinaryOperator<Left, Operator, Right>: Expr = {
-    <left:Left> <op:Operator> <right:Right> => Expr::Binary(Box::new(left), op, Box::new(right)),
+    <s:@L> <left:Left> <op:Operator> <right:Right> <e:@L> => Expr::Binary {
+        left: Box::new(left),
+        op: op,
+        right: Box::new(right),
+        location: location(s, e),
+    },
     Right
 }
