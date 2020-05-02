@@ -84,7 +84,10 @@ Unary = {
     UnaryOperator<UnaryOp, Unary, Term>,
     Call
 }
-Call: Expr = <Term> "()" => Expr::Call(Box::new(<>));
+Call: Expr = {
+    <Term> "(" ")" => Expr::Call(Box::new(<>)),
+    <Call> "(" ")" => Expr::Call(Box::new(<>))
+}
 
 EqualityOp: BinaryOp = {
     "==" => BinaryOp::Eq,

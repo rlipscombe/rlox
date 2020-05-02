@@ -1,0 +1,3 @@
+// This will parse, but will throw a runtime error.
+var x = clock()();
+print x;

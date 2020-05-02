@@ -290,6 +290,7 @@ pub enum RuntimeError {
         name: String,
         location: ast::Location,
     },
+    NotCallable,
 }
 
 fn report_error(path: &str, source: &str, e: Error) {
@@ -313,6 +314,8 @@ fn report_error(path: &str, source: &str, e: Error) {
         Error::Runtime(RuntimeError::TypeMismatch) => {
             Diagnostic::error().with_message("type mismatch")
         }
+        Error::Runtime(RuntimeError::NotCallable) => Diagnostic::error()
+            .with_message("not callable"),
         Error::Assert { location } => Diagnostic::error()
             .with_message("assertion failed")
             .with_labels(vec![Label::primary(file_id, location.start..location.end)]),
