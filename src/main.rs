@@ -306,13 +306,16 @@ fn report_error(path: &str, source: &str, e: Error) {
         Error::Parse(ParseError::InvalidToken { location: start }) => Diagnostic::error()
             .with_message("invalid token")
             .with_labels(vec![Label::primary(file_id, start..start + 1)]),
+        Error::Parse(_) => Diagnostic::error().with_message(format!("{:?}", e)),
         Error::Runtime(RuntimeError::IdentifierNotFound { name, location }) => Diagnostic::error()
             .with_message(format!("identifier '{}' not found", name))
             .with_labels(vec![Label::primary(file_id, location.start..location.end)]),
+        Error::Runtime(RuntimeError::TypeMismatch) => {
+            Diagnostic::error().with_message("type mismatch")
+        }
         Error::Assert { location } => Diagnostic::error()
             .with_message("assertion failed")
             .with_labels(vec![Label::primary(file_id, location.start..location.end)]),
-        error => Diagnostic::error().with_message(format!("{:?}", error)),
     };
 
     let writer = StandardStream::stderr(ColorChoice::Auto);
