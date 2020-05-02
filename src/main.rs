@@ -310,7 +310,7 @@ fn report_error(path: &str, source: &str, e: Error) {
         Error::Parse(_) => Diagnostic::error().with_message(format!("{:?}", e)),
         Error::Runtime(RuntimeError::IdentifierNotFound { name, location }) => Diagnostic::error()
             .with_message(format!("identifier '{}' not found", name))
-            .with_labels(vec![Label::primary(file_id, location.start..location.end)]),
+            .with_labels(vec![Label::primary(file_id, location)]),
         Error::Runtime(RuntimeError::TypeMismatch) => {
             Diagnostic::error().with_message("type mismatch")
         }
@@ -318,7 +318,7 @@ fn report_error(path: &str, source: &str, e: Error) {
             .with_message("not callable"),
         Error::Assert { location } => Diagnostic::error()
             .with_message("assertion failed")
-            .with_labels(vec![Label::primary(file_id, location.start..location.end)]),
+            .with_labels(vec![Label::primary(file_id, location)]),
     };
 
     let writer = StandardStream::stderr(ColorChoice::Auto);

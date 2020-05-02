@@ -4,6 +4,12 @@ pub struct Location {
     pub end: usize,
 }
 
+impl Into<std::ops::Range<usize>> for Location {
+    fn into(self) -> std::ops::Range<usize> {
+        self.start..self.end
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Expr {
     Nil,
