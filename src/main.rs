@@ -270,7 +270,7 @@ fn do_call<'s>(v: Value) -> Result<Value, Error<'s>> {
             let r = f();
             Ok(r)
         },
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch))
+        _ => Err(Error::Runtime(RuntimeError::NotCallable))
     }
 }
 
