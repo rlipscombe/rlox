@@ -2,6 +2,8 @@
 extern crate lalrpop_util;
 lalrpop_mod!(pub lox);
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use codespan_reporting::files::SimpleFiles;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
@@ -24,6 +26,11 @@ fn main() {
 
     let mut environment = Environment::new();
     environment.push();
+    let clock = Value::NativeFunction("clock".into(), || {
+        let now = SystemTime::now();
+        Value::Number(now.duration_since(UNIX_EPOCH).unwrap().as_millis() as f64)
+    });
+    environment.define("clock", clock);
     match interpret_source(&source, &mut environment) {
         Ok(_) => {}
         Err(e) => report_error(&path, &source, e),
@@ -62,8 +69,12 @@ fn interpret_statement<'s>(
             Ok(())
         }
         Assert { expr, location } => match evaluate(&expr, environment)? {
-            Value::Nil => Err(Error::Assert { location: *location }),
-            Value::Boolean(false) => Err(Error::Assert { location: *location }),
+            Value::Nil => Err(Error::Assert {
+                location: *location,
+            }),
+            Value::Boolean(false) => Err(Error::Assert {
+                location: *location,
+            }),
             _ => Ok(()),
         },
         VarDecl(i, e) => {
@@ -107,6 +118,7 @@ fn do_print(e: Value) {
         Number(n) => println!("{}", n),
         Boolean(b) => println!("{}", b),
         String(s) => println!("{}", s),
+        NativeFunction(name, _) => println!("<fun {}>", name),
     }
 }
 
@@ -116,6 +128,7 @@ pub enum Value {
     Number(f64),
     Boolean(bool),
     String(String),
+    NativeFunction(String, fn() -> Value),
 }
 
 fn do_add<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
@@ -226,9 +239,12 @@ pub fn evaluate<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<V
             ast::BinaryOp::Gt => do_gt(evaluate(l, environment)?, evaluate(r, environment)?),
             ast::BinaryOp::Ge => do_ge(evaluate(l, environment)?, evaluate(r, environment)?),
         },
-        ast::Expr::Var { name, location } => environment
-            .get(&name)
-            .ok_or_else(|| Error::Runtime(RuntimeError::IdentifierNotFound { name: name.into(), location: *location })),
+        ast::Expr::Var { name, location } => environment.get(&name).ok_or_else(|| {
+            Error::Runtime(RuntimeError::IdentifierNotFound {
+                name: name.into(),
+                location: *location,
+            })
+        }),
         ast::Expr::Assignment {
             name,
             rhs,
@@ -236,9 +252,25 @@ pub fn evaluate<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<V
         } => {
             let value = evaluate(rhs, environment)?;
             environment.assign(&name, value).or(Err(Error::Runtime(
-                RuntimeError::IdentifierNotFound { name: name.into(), location: *location },
+                RuntimeError::IdentifierNotFound {
+                    name: name.into(),
+                    location: *location,
+                },
             )))
         }
+        ast::Expr::Call(e) => {
+            do_call(evaluate(e, environment)?)
+        }
+    }
+}
+
+fn do_call<'s>(v: Value) -> Result<Value, Error<'s>> {
+    match v {
+        Value::NativeFunction(_, f) => {
+            let r = f();
+            Ok(r)
+        },
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch))
     }
 }
 
@@ -291,8 +323,7 @@ fn report_error(path: &str, source: &str, e: Error) {
 fn expected_one_of(expected: Vec<String>) -> Vec<String> {
     if expected.len() == 1 {
         vec![format!("expected {}", expected[0])]
-    }
-    else {
+    } else {
         vec![format!("expected one of {}", expected.join(", "))]
     }
 }

@@ -21,6 +21,7 @@ pub enum Expr {
         rhs: Box<Expr>,
         location: Location,
     },
+    Call(Box<Expr>)
 }
 
 #[derive(Debug, PartialEq)]

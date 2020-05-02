@@ -1,0 +1,15 @@
+var t0 = clock();
+
+var a = 0;
+var b = 1;
+
+while (a < 1000000) {
+    print a;
+    var temp = a;
+    a = b;
+    b = temp + b;
+}
+
+var t1 = clock();
+print "----";
+print t1 - t0;

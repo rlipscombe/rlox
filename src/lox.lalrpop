@@ -80,7 +80,11 @@ Equality = BinaryOperator<Equality, EqualityOp, Comparison>;
 Comparison = BinaryOperator<Comparison, ComparisonOp, Addition>;
 Addition = BinaryOperator<Addition, AdditionOp, Multiplication>;
 Multiplication = BinaryOperator<Multiplication, MultiplicationOp, Unary>;
-Unary = UnaryOperator<UnaryOp, Unary, Term>;
+Unary = {
+    UnaryOperator<UnaryOp, Unary, Term>,
+    Call
+}
+Call: Expr = <Term> "()" => Expr::Call(Box::new(<>));
 
 EqualityOp: BinaryOp = {
     "==" => BinaryOp::Eq,

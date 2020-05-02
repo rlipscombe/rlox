@@ -1,0 +1,3 @@
+// At this point in our adventure, 'clock' is a global, Rust-defined, function.
+print clock;
+print clock();
