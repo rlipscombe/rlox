@@ -98,8 +98,14 @@ Unary = {
     Call
 }
 Call: Expr = {
-    <s:@L> <callee:Term> "(" ")" <e:@L> => Expr::Call { callee: Box::new(callee), location: location(s, e) },
-    <s:@L> <callee:Call> "(" ")" <e:@L> => Expr::Call { callee: Box::new(callee), location: location(s, e) }
+    <s:@L> <callee:Term> "(" <args:Comma<Expr>> ")" <e:@L> => Expr::Call {
+        callee: Box::new(callee),
+        location: location(s, e)
+    },
+    <s:@L> <callee:Call> "(" <args:Comma<Expr>> ")" <e:@L> => Expr::Call {
+        callee: Box::new(callee),
+        location: location(s, e)
+    }
 }
 
 EqualityOp: BinaryOp = {
@@ -172,3 +178,17 @@ BinaryOperator<Left, Operator, Right>: Expr = {
     },
     Right
 }
+
+// Note that this allows trailing delimiters. I like that, but it's not
+// in the Lox language as defined.
+Delim<T, Delimiter>: Vec<T> = {
+    <v:(<T> Delimiter)*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
+}
+Comma<T>: Vec<T> = Delim<T, ","> => <>;
