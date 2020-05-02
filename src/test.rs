@@ -150,8 +150,8 @@ fn print_hello() {
     let parsed = parser.parse(r#"print "Hello World!";"#);
     assert_eq!(
         parsed,
-        Ok(Stmt::Print(Box::new(Expr::String(
+        Ok(Stmt::Print(Expr::String(
             "Hello World!".to_string()
-        ))))
+        )))
     );
 }
