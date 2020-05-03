@@ -23,8 +23,8 @@ impl Scope {
             Entry::Occupied(mut entry) => {
                 entry.insert(value.clone());
                 Ok(value)
-            },
-            Entry::Vacant(_) => Err(())
+            }
+            Entry::Vacant(_) => Err(()),
         }
     }
 
@@ -39,9 +39,11 @@ pub struct Environment {
 
 impl Environment {
     pub fn new() -> Environment {
-        Self {
+        let mut result = Self {
             scopes: LinkedList::new()
-        }
+        };
+        result.push();
+        result
     }
 
     pub fn push(&mut self) {
@@ -75,5 +77,18 @@ impl Environment {
         }
 
         None
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::Environment;
+    use crate::Value;
+
+    #[test]
+    fn define_then_get() {
+        let mut e = Environment::new();
+        e.define("meaning", Value::Number(42.0));
+        assert_eq!(e.get("meaning"), Some(Value::Number(42.0)));
     }
 }

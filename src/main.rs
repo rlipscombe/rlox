@@ -27,7 +27,6 @@ fn main() {
     let source = std::fs::read_to_string(path).expect("read file");
 
     let mut environment = Environment::new();
-    environment.push();
     let clock = Value::NativeFunction("clock".into(), || {
         let now = SystemTime::now();
         Value::Number(now.duration_since(UNIX_EPOCH).unwrap().as_millis() as f64)
