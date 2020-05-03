@@ -104,6 +104,17 @@ fn interpret_statement<'s>(
             let result = interpret_statements(statements, environment);
             result
         }
+        Return(expr) => {
+            // TODO: I'm uneasy about using Result for this; it feels like we need
+            // something specific to this use.
+            match expr {
+                Some(expr) => {
+                    let value = evaluate(expr, environment)?;
+                    Err(Error::Return(value))
+                }
+                None => Err(Error::Return(Value::Nil)),
+            }
+        }
         If { cond, then, else_ } => match evaluate(&cond, environment) {
             Ok(Value::Boolean(true)) => interpret_statement(then, environment),
             Ok(Value::Boolean(false)) => interpret_statement(else_, environment),
@@ -201,6 +212,7 @@ fn do_eq<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l == r)),
         (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l == r)),
+        (Value::Nil, Value::Nil) => Ok(Value::Boolean(true)),
         _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
@@ -365,8 +377,11 @@ fn do_call<'s>(
             for (p, v) in params.iter().zip(argv.iter()) {
                 environment.define(p, v.clone());
             }
-            interpret_statement(&body, &mut environment)?;
-            Ok(Value::Nil)
+            match interpret_statement(&body, &mut environment) {
+                Ok(()) => Ok(Value::Nil),
+                Err(Error::Return(value)) => Ok(value),
+                Err(e) => Err(e),
+            }
         }
         _ => {
             let location = callee.location();
@@ -384,6 +399,7 @@ pub enum Error<'s> {
     Parse(ParseError<'s>),
     Runtime(RuntimeError),
     Assert { location: ast::Location },
+    Return(Value),
 }
 
 #[derive(Debug, PartialEq)]
@@ -440,6 +456,7 @@ fn report_error(path: &str, source: &str, e: Error) {
         Error::Assert { location } => Diagnostic::error()
             .with_message("assertion failed")
             .with_labels(vec![Label::primary(file_id, location)]),
+        Error::Return(_) => panic!("using error for return values was a bad idea?")
     };
 
     let writer = StandardStream::stderr(ColorChoice::Auto);

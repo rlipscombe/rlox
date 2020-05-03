@@ -1,0 +1,7 @@
+fun procedure() {
+    print "this doesn't return anything explicitly";
+}
+
+var result = procedure();
+print result;
+assert result == nil;

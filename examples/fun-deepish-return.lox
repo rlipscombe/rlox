@@ -1,0 +1,13 @@
+fun count(n) {
+  while (n < 100) {
+    if (n == 3) {
+        return n; // <--
+    }
+    print n;
+    n = n + 1;
+  }
+}
+
+var result = count(1);
+print result;
+assert result == 3;

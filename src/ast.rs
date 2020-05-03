@@ -107,6 +107,9 @@ pub enum Stmt {
         expr: Expr,
         location: Location,
     },
+    // The expression is optional, and could be replaced with Expr::Nil
+    // in a desugaring step. Except that it's not really "desugaring".
+    Return(Option<Expr>),
     VarDecl(String, Expr),
     FunDecl {
         name: String,

@@ -39,14 +39,16 @@ pub Statement = {
     ForStmt,
     IfStmt,
     PrintStmt,
-    WhileStmt,
     AssertStmt,
+    ReturnStmt,
+    WhileStmt,
     Block
 }
 
 ExprStmt: Stmt = <Expr> ";" => Stmt::Expr(<>);
 PrintStmt: Stmt = "print" <Expr> ";" => Stmt::Print(<>);
-AssertStmt: Stmt = "assert" <s:@L> <expr:Expr> <e:@L>";" => Stmt::Assert{ expr: expr, location: location(s, e) };
+AssertStmt: Stmt = "assert" <s:@L> <expr:Expr> <e:@L>";" => Stmt::Assert { expr: expr, location: location(s, e) };
+ReturnStmt: Stmt = "return" <Expr?> ";" => Stmt::Return(<>);
 Block: Stmt = "{" <Declaration*> "}" => Stmt::Block(<>);
 
 ForStmt: Stmt =
