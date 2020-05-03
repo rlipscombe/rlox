@@ -1,0 +1,13 @@
+var x = 1;
+
+fun increment_x() {
+    print x;
+    x = x + 1;
+}
+
+increment_x();
+print x;
+assert x == 2;
+increment_x();
+print x;
+assert x == 3;

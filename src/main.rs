@@ -86,8 +86,10 @@ fn interpret_statement<'s>(
         FunDecl {
             name, params, body, ..
         } => {
+            let closure = environment.clone();
             let callable = Value::LoxFunction {
                 name: name.to_string(),
+                closure: closure,
                 params: params.to_vec(),
                 body: body.clone(),
             };
@@ -95,9 +97,7 @@ fn interpret_statement<'s>(
             Ok(())
         }
         Block(statements) => {
-            environment.push();
             let result = interpret_statements(statements, environment);
-            environment.pop();
             result
         }
         If { cond, then, else_ } => match evaluate(&cond, environment) {
@@ -142,7 +142,7 @@ pub enum Value {
     Boolean(bool),
     String(String),
     NativeFunction(String, fn() -> Value),
-    LoxFunction { name: String, params: Vec<String>, body: Box<ast::Stmt> },
+    LoxFunction { name: String, closure: Environment, params: Vec<String>, body: Box<ast::Stmt> },
 }
 
 fn do_add<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
@@ -314,11 +314,9 @@ fn do_call<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<Value,
             let r = f();
             Ok(r)
         }
-        Value::LoxFunction { body, .. } => {
-            let mut environment = Environment::new();
-            // TODO: Needs globals (which is where using LinkedList didn't
-            // get us anything); needs arguments.
-            environment.push();
+        Value::LoxFunction { closure, body, .. } => {
+            let mut environment = Environment::with_enclosing(&closure);
+            // TODO: Needs arguments.
             interpret_statement(&body, &mut environment)?;
             Ok(Value::Nil)
         }

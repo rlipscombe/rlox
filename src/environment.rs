@@ -1,82 +1,100 @@
 use crate::Value;
+use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::collections::LinkedList;
+use std::fmt::{Debug, Error, Formatter};
+use std::rc::Rc;
 
 struct Scope {
     values: HashMap<String, Value>,
+    enclosing: Option<Environment>,
+}
+
+#[derive(Clone)]
+pub struct Environment {
+    scope: Rc<RefCell<Scope>>,
+}
+
+impl Debug for Environment {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        // TODO: Actually emit something here.
+        f.debug_struct("Environment").finish()
+    }
+}
+
+impl PartialEq for Environment {
+    fn eq(&self, _other: &Environment) -> bool {
+        // Environments are never equivalent.
+        false
+    }
 }
 
 impl Scope {
-    fn new() -> Self {
-        Self {
+    pub fn new() -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Self {
             values: HashMap::new(),
-        }
+            enclosing: None,
+        }))
     }
 
-    fn define(&mut self, name: String, value: Value) {
-        self.values.insert(name, value);
+    pub fn with_enclosing(enclosing: Environment) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Self {
+            values: HashMap::new(),
+            enclosing: Some(enclosing),
+        }))
     }
 
-    fn assign(&mut self, name: String, value: Value) -> Result<Value, ()> {
-        match self.values.entry(name) {
+    pub fn define(&mut self, name: &str, value: Value) {
+        self.values.insert(name.to_string(), value);
+    }
+
+    pub fn assign(&mut self, name: &str, value: Value) -> Result<Value, ()> {
+        match self.values.entry(name.to_string()) {
             Entry::Occupied(mut entry) => {
                 entry.insert(value.clone());
                 Ok(value)
             }
-            Entry::Vacant(_) => Err(()),
+            Entry::Vacant(_) => match &mut self.enclosing {
+                None => Err(()),
+                Some(e) => e.assign(name, value),
+            },
         }
-    }
-
-    fn get(&self, name: &str) -> Option<Value> {
-        self.values.get(name).cloned()
-    }
-}
-
-pub struct Environment {
-    scopes: LinkedList<Scope>,
-}
-
-impl Environment {
-    pub fn new() -> Environment {
-        let mut result = Self {
-            scopes: LinkedList::new(),
-        };
-        result.push();
-        result
-    }
-
-    pub fn push(&mut self) {
-        self.scopes.push_front(Scope::new());
-    }
-
-    pub fn pop(&mut self) {
-        self.scopes.pop_front().unwrap();
-    }
-
-    pub fn define(&mut self, name: &str, value: Value) {
-        self.scopes.front_mut().unwrap().define(name.into(), value);
-    }
-
-    pub fn assign(&mut self, name: &str, value: Value) -> Result<Value, ()> {
-        for scope in self.scopes.iter_mut() {
-            match scope.assign(name.into(), value.clone()) {
-                Ok(value) => return Ok(value),
-                Err(_) => {}
-            }
-        }
-        Err(())
     }
 
     pub fn get(&self, name: &str) -> Option<Value> {
-        for scope in self.scopes.iter() {
-            match scope.get(name) {
-                Some(value) => return Some(value),
-                None => {}
-            }
+        match self.values.get(name) {
+            Some(v) => Some(v.clone()),
+            None => match &self.enclosing {
+                None => None,
+                Some(e) => e.get(name),
+            },
         }
+    }
+}
 
-        None
+impl Environment {
+    pub fn new() -> Self {
+        Self {
+            scope: Scope::new(),
+        }
+    }
+
+    pub fn with_enclosing(enclosing: &Environment) -> Self {
+        Self {
+            scope: Scope::with_enclosing(enclosing.clone()),
+        }
+    }
+
+    pub fn define(&mut self, name: &str, value: Value) {
+        self.scope.borrow_mut().define(name, value);
+    }
+
+    pub fn assign(&mut self, name: &str, value: Value) -> Result<Value, ()> {
+        self.scope.borrow_mut().assign(name, value)
+    }
+
+    pub fn get(&self, name: &str) -> Option<Value> {
+        self.scope.borrow().get(name)
     }
 }
 
@@ -121,18 +139,20 @@ mod test {
     fn get_outer() {
         let mut e = Environment::new();
         e.define("a", Value::String("outer a".to_string()));
-        e.push();
-        assert_eq!(e.get("a"), Some(Value::String("outer a".to_string())));
-        e.pop();
+        {
+            let e = Environment::with_enclosing(&e);
+            assert_eq!(e.get("a"), Some(Value::String("outer a".to_string())));
+        }
     }
 
     #[test]
     fn assign_outer() {
         let mut e = Environment::new();
         e.define("a", Value::String("outer a".to_string()));
-        e.push();
-        e.assign("a", Value::String("inner a".to_string())).unwrap();
-        e.pop();
+        {
+            let mut e = Environment::with_enclosing(&e);
+            e.assign("a", Value::String("inner a".to_string())).unwrap();
+        }
         assert_eq!(e.get("a"), Some(Value::String("inner a".to_string())));
     }
 
@@ -140,10 +160,11 @@ mod test {
     fn define_inner() {
         let mut e = Environment::new();
         e.define("a", Value::String("outer a".to_string()));
-        e.push();
-        e.define("a", Value::String("inner a".to_string()));
-        assert_eq!(e.get("a"), Some(Value::String("inner a".to_string())));
-        e.pop();
+        {
+            let mut e = Environment::with_enclosing(&e);
+            e.define("a", Value::String("inner a".to_string()));
+            assert_eq!(e.get("a"), Some(Value::String("inner a".to_string())));
+        }
         assert_eq!(e.get("a"), Some(Value::String("outer a".to_string())));
     }
 }
