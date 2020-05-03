@@ -1,6 +1,6 @@
 use crate::Value;
-use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::collections::LinkedList;
 
 struct Scope {
@@ -34,13 +34,13 @@ impl Scope {
 }
 
 pub struct Environment {
-    scopes: LinkedList<Scope>
+    scopes: LinkedList<Scope>,
 }
 
 impl Environment {
     pub fn new() -> Environment {
         let mut result = Self {
-            scopes: LinkedList::new()
+            scopes: LinkedList::new(),
         };
         result.push();
         result
@@ -90,5 +90,60 @@ mod test {
         let mut e = Environment::new();
         e.define("meaning", Value::Number(42.0));
         assert_eq!(e.get("meaning"), Some(Value::Number(42.0)));
+    }
+
+    #[test]
+    fn define_then_assign_then_get() {
+        let mut e = Environment::new();
+        e.define("there_yet", Value::Boolean(false));
+        assert_eq!(e.get("there_yet"), Some(Value::Boolean(false)));
+
+        assert!(e.assign("there_yet", Value::Boolean(false)).is_ok());
+        assert_eq!(e.get("there_yet"), Some(Value::Boolean(false)));
+
+        assert!(e.assign("there_yet", Value::Boolean(true)).is_ok());
+        assert_eq!(e.get("there_yet"), Some(Value::Boolean(true)));
+    }
+
+    #[test]
+    fn get_unknown() {
+        let e = Environment::new();
+        assert_eq!(e.get("who"), None);
+    }
+
+    #[test]
+    fn assign_unknown() {
+        let mut e = Environment::new();
+        assert!(e.assign("what", Value::Boolean(false)).is_err());
+    }
+
+    #[test]
+    fn get_outer() {
+        let mut e = Environment::new();
+        e.define("a", Value::String("outer a".to_string()));
+        e.push();
+        assert_eq!(e.get("a"), Some(Value::String("outer a".to_string())));
+        e.pop();
+    }
+
+    #[test]
+    fn assign_outer() {
+        let mut e = Environment::new();
+        e.define("a", Value::String("outer a".to_string()));
+        e.push();
+        e.assign("a", Value::String("inner a".to_string())).unwrap();
+        e.pop();
+        assert_eq!(e.get("a"), Some(Value::String("inner a".to_string())));
+    }
+
+    #[test]
+    fn define_inner() {
+        let mut e = Environment::new();
+        e.define("a", Value::String("outer a".to_string()));
+        e.push();
+        e.define("a", Value::String("inner a".to_string()));
+        assert_eq!(e.get("a"), Some(Value::String("inner a".to_string())));
+        e.pop();
+        assert_eq!(e.get("a"), Some(Value::String("outer a".to_string())));
     }
 }
