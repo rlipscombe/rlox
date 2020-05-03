@@ -10,7 +10,7 @@ impl Into<std::ops::Range<usize>> for Location {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Nil {
         location: Location,
@@ -73,13 +73,13 @@ impl Locatable for Expr {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
     Invert,
     Negate,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinaryOp {
     Mul,
     Div,
@@ -97,7 +97,7 @@ pub enum BinaryOp {
     Ge,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     Empty,
     Expr(Expr),
@@ -107,6 +107,12 @@ pub enum Stmt {
         location: Location,
     },
     VarDecl(String, Expr),
+    FunDecl {
+        name: String,
+        params: Vec<String>,
+        body: Box<Stmt>,
+        location: Location,
+    },
     Block(Vec<Stmt>),
     If {
         cond: Expr,

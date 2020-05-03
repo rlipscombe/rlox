@@ -1,0 +1,6 @@
+fun greet() {
+    print "Hello World!";
+}
+
+print greet;
+greet();

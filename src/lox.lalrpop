@@ -14,7 +14,21 @@ else {
 
 pub Program = Declaration*;
 
-Declaration: Stmt = { VarDecl, Statement, }
+Declaration: Stmt = {
+    FunDecl,
+    VarDecl,
+    Statement,
+}
+
+FunDecl: Stmt = {
+    <s:@L> "fun" <name:Identifier> "(" <params:Comma<Identifier>> ")" <e:@L> <body:Block> => Stmt::FunDecl {
+        name: name.to_string(),
+        params: params.iter().map(|p| p.to_string()).collect(),
+        body: Box::new(body),
+        location: location(s, e)
+    }
+}
+
 VarDecl: Stmt = {
     "var" <i:Identifier> "=" <e:Expr> ";" => Stmt::VarDecl(i.to_string(), e),
     <s:@L> "var" <i:Identifier> <e:@L> ";" => Stmt::VarDecl(i.to_string(), Expr::Nil { location: location(s, e) }),

@@ -83,6 +83,17 @@ fn interpret_statement<'s>(
             environment.define(&i, value);
             Ok(())
         }
+        FunDecl {
+            name, params, body, ..
+        } => {
+            let callable = Value::LoxFunction {
+                name: name.to_string(),
+                params: params.to_vec(),
+                body: body.clone(),
+            };
+            environment.define(name, callable);
+            Ok(())
+        }
         Block(statements) => {
             environment.push();
             let result = interpret_statements(statements, environment);
@@ -119,7 +130,8 @@ fn do_print(e: Value) {
         Number(n) => println!("{}", n),
         Boolean(b) => println!("{}", b),
         String(s) => println!("{}", s),
-        NativeFunction(name, _) => println!("<fun {}>", name),
+        NativeFunction(name, _) => println!("<native fun {}>", name),
+        LoxFunction { name, .. } => println!("<lox fun {}>", name),
     }
 }
 
@@ -130,6 +142,7 @@ pub enum Value {
     Boolean(bool),
     String(String),
     NativeFunction(String, fn() -> Value),
+    LoxFunction { name: String, params: Vec<String>, body: Box<ast::Stmt> },
 }
 
 fn do_add<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
@@ -300,6 +313,14 @@ fn do_call<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<Value,
         Value::NativeFunction(_, f) => {
             let r = f();
             Ok(r)
+        }
+        Value::LoxFunction { body, .. } => {
+            let mut environment = Environment::new();
+            // TODO: Needs globals (which is where using LinkedList didn't
+            // get us anything); needs arguments.
+            environment.push();
+            interpret_statement(&body, &mut environment)?;
+            Ok(Value::Nil)
         }
         _ => {
             let location = expr.location();
