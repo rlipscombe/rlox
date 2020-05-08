@@ -1,3 +1,4 @@
-// This will parse, but will throw a runtime error.
+// This will parse, but will throw a runtime error, because clock() doesn't
+// return a callable.
 var x = clock()();
 print x;

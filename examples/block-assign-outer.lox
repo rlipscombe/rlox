@@ -6,3 +6,4 @@ var x;
     x = y = 42;
 }
 print x;
+assert x == 42;
