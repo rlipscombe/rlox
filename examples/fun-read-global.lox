@@ -1,0 +1,8 @@
+var g = 42;
+
+fun read_global() {
+    print(g);
+    assert g == 42;
+}
+
+read_global();

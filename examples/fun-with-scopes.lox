@@ -1,0 +1,34 @@
+// This will print "global a".
+var a = "global a";
+
+fun foo() {
+    print a;
+}
+
+foo();  // "global a"
+
+// With lexical scoping, this will print "global a". With non-lexical scoping,
+// it will print "local a".
+fun bar() {
+    var a = "local a";
+    foo();
+}
+
+bar();  // "global a"
+
+a = "global a2";
+
+fun baz() {
+    foo();
+}
+
+baz();  // "global a2" -- is this what we want? if we allow mutable environments, yes. If we were Erlang, probably not.
+
+// Redeclare; does 'foo' see this?
+var a = "global a3";
+
+fun quux() {
+    foo();
+}
+
+quux();  // "global a3" -- is this what we want?
