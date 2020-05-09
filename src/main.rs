@@ -27,10 +27,14 @@ fn main() {
     let source = std::fs::read_to_string(path).expect("read file");
 
     let mut environment = Environment::new();
-    let clock = Value::NativeFunction("clock".into(), || {
-        let now = SystemTime::now();
-        Value::Number(now.duration_since(UNIX_EPOCH).unwrap().as_millis() as f64)
-    });
+    let clock = Value::NativeFunction {
+        name: "clock".to_string(),
+        arity: 0,
+        fun: |_argv| {
+            let now = SystemTime::now();
+            Value::Number(now.duration_since(UNIX_EPOCH).unwrap().as_millis() as f64)
+        },
+    };
     environment.define("clock", clock);
     match interpret_source(&source, &mut environment) {
         Ok(_) => {}
@@ -130,8 +134,8 @@ fn do_print(e: Value) {
         Number(n) => println!("{}", n),
         Boolean(b) => println!("{}", b),
         String(s) => println!("{}", s),
-        NativeFunction(name, _) => println!("<native fun {}>", name),
-        LoxFunction { name, .. } => println!("<lox fun {}>", name),
+        NativeFunction { name, .. } => println!("<fun {} (native)>", name),
+        LoxFunction { name, .. } => println!("<fun {} (lox)>", name),
     }
 }
 
@@ -141,8 +145,20 @@ pub enum Value {
     Number(f64),
     Boolean(bool),
     String(String),
-    NativeFunction(String, fn() -> Value),
-    LoxFunction { name: String, closure: Environment, params: Vec<String>, body: Box<ast::Stmt> },
+    NativeFunction {
+        name: String,
+        arity: usize,
+        // TODO: Result<Value, RuntimeError>, but that needs lifetime
+        // shenanigans.
+        fun: fn(Vec<Value>) -> Value,
+    },
+    // TODO: implement "return"
+    LoxFunction {
+        name: String,
+        closure: Environment,
+        params: Vec<String>,
+        body: Box<ast::Stmt>,
+    },
 }
 
 fn do_add<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
@@ -303,25 +319,57 @@ pub fn evaluate<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<V
                 },
             )))
         }
-        ast::Expr::Call { callee, .. } => do_call(&callee, environment),
+        ast::Expr::Call { callee, args, .. } => do_call(&callee, args, environment),
     }
 }
 
-fn do_call<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
-    let v = evaluate(expr, environment)?;
-    match v {
-        Value::NativeFunction(_, f) => {
-            let r = f();
+fn do_call<'s>(
+    callee: &ast::Expr,
+    args: &Vec<ast::Expr>,
+    environment: &mut Environment,
+) -> Result<Value, Error<'s>> {
+    // The Java reference implementation of Lox evaluates the callee,
+    // then the arguments, and _then_ checks that the callee is actually
+    // callable.
+    let callable = evaluate(callee, environment)?;
+    let mut argv = Vec::with_capacity(args.len());
+    for a in args {
+        argv.push(evaluate(a, environment)?);
+    }
+    match callable {
+        Value::NativeFunction { fun, arity, .. } => {
+            if argv.len() != arity {
+                return Err(Error::Runtime(RuntimeError::ArityMismatch {
+                    expected: arity,
+                    actual: argv.len(),
+                    location: callee.location(),
+                }));
+            }
+            let r = fun(argv);
             Ok(r)
         }
-        Value::LoxFunction { closure, body, .. } => {
+        Value::LoxFunction {
+            closure,
+            params,
+            body,
+            ..
+        } => {
+            if argv.len() != params.len() {
+                return Err(Error::Runtime(RuntimeError::ArityMismatch {
+                    expected: params.len(),
+                    actual: argv.len(),
+                    location: callee.location(),
+                }));
+            }
             let mut environment = Environment::with_enclosing(&closure);
-            // TODO: Needs arguments.
+            for (p, v) in params.iter().zip(argv.iter()) {
+                environment.define(p, v.clone());
+            }
             interpret_statement(&body, &mut environment)?;
             Ok(Value::Nil)
         }
         _ => {
-            let location = expr.location();
+            let location = callee.location();
             Err(Error::Runtime(RuntimeError::NotCallable {
                 location: location,
             }))
@@ -346,6 +394,11 @@ pub enum RuntimeError {
         location: ast::Location,
     },
     NotCallable {
+        location: ast::Location,
+    },
+    ArityMismatch {
+        expected: usize,
+        actual: usize,
         location: ast::Location,
     },
 }
@@ -373,6 +426,16 @@ fn report_error(path: &str, source: &str, e: Error) {
         }
         Error::Runtime(RuntimeError::NotCallable { location }) => Diagnostic::error()
             .with_message("not callable")
+            .with_labels(vec![Label::primary(file_id, location)]),
+        Error::Runtime(RuntimeError::ArityMismatch {
+            expected,
+            actual,
+            location,
+        }) => Diagnostic::error()
+            .with_message(format!(
+                "arity mismatch: expected {} arguments but got {}",
+                expected, actual
+            ))
             .with_labels(vec![Label::primary(file_id, location)]),
         Error::Assert { location } => Diagnostic::error()
             .with_message("assertion failed")

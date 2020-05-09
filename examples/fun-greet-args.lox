@@ -1,0 +1,5 @@
+fun greet(who) {
+    print "Hello " + who + "!";
+}
+
+greet("World");

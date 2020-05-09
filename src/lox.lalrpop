@@ -114,10 +114,12 @@ Unary = {
 Call: Expr = {
     <s:@L> <callee:Term> "(" <args:Comma<Expr>> ")" <e:@L> => Expr::Call {
         callee: Box::new(callee),
+        args: args,
         location: location(s, e)
     },
     <s:@L> <callee:Call> "(" <args:Comma<Expr>> ")" <e:@L> => Expr::Call {
         callee: Box::new(callee),
+        args: args,
         location: location(s, e)
     }
 }
