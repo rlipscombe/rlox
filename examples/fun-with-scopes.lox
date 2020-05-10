@@ -24,6 +24,7 @@ fun baz() {
 
 baz();  // "global a2" -- is this what we want? if we allow mutable environments, yes. If we were Erlang, probably not.
 
+// Lox allows redeclaring variables in the same scope.
 // Redeclare; does 'foo' see this?
 var a = "global a3";
 
@@ -32,3 +33,17 @@ fun quux() {
 }
 
 quux();  // "global a3" -- is this what we want?
+
+print "=====";
+
+// from 11.1
+var a = "global";
+{
+  fun showA() {
+    print a;
+  }
+
+  showA();
+  var a = "block";
+  showA();
+}
