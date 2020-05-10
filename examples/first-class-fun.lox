@@ -1,0 +1,19 @@
+fun aggregate(begin, end, f) {
+    var acc = begin;
+    for (var i = begin + 1; i <= end; i = i + 1) {
+        acc = f(i, acc);
+    }
+
+    return acc;
+}
+
+fun mul(x, a) { return x * a; }
+print aggregate(1, 5, mul);     // 120
+
+var sum = fun(x, a) { return x + a; };
+print aggregate(1, 5, sum); // 15
+
+// Functions are printable
+print aggregate;
+print sum;
+print mul;

@@ -52,6 +52,11 @@ pub enum Expr {
         args: Vec<Expr>,
         location: Location,
     },
+    Fun {
+        params: Vec<String>,
+        body: Box<Stmt>,
+        location: Location,
+    }
 }
 
 pub trait Locatable {
@@ -70,6 +75,7 @@ impl Locatable for Expr {
             Expr::Var { location, ..} => location,
             Expr::Assignment { location, ..} => location,
             Expr::Call { location, .. } => location,
+            Expr::Fun { location, .. } => location,
         }
     }
 }

@@ -160,6 +160,11 @@ Term: Expr = {
     <s:@L> "nil" <e:@L> => Expr::Nil { location: location(s, e) },
     <s:@L> <value:String> <e:@L> => Expr::String { value: value, location: location(s, e) },
     "(" <Expr> ")",
+    <s:@L> "fun" "(" <params:Comma<Identifier>> ")" <e:@L> <body:Block> => Expr::Fun {
+        params: params.iter().map(|p| p.to_string()).collect(),
+        body: Box::new(body),
+        location: location(s, e)
+    },
     <s:@L> <i:Identifier> <e:@L> => Expr::Var {
         name: i.to_string(),
         location: location(s, e)
