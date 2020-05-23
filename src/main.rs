@@ -2,11 +2,10 @@
 extern crate lalrpop_util;
 lalrpop_mod!(pub lox);
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 mod ast;
 mod environment;
 mod interpreter;
+mod bindings;
 mod error;
 mod value;
 
@@ -27,15 +26,7 @@ fn main() {
     let source = std::fs::read_to_string(path).expect("read file");
 
     let mut environment = Environment::new();
-    let clock = Value::NativeFunction {
-        name: "clock".to_string(),
-        arity: 0,
-        fun: |_argv| {
-            let now = SystemTime::now();
-            Value::Number(now.duration_since(UNIX_EPOCH).unwrap().as_millis() as f64)
-        },
-    };
-    environment.define("clock", clock);
+    bindings::register_globals(&mut environment);
     match interpret_source(&source, &mut environment) {
         Ok(_) => {}
         Err(e) => error::report_error(&path, &source, e),
