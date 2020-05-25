@@ -56,7 +56,7 @@ pub enum Expr {
         params: Vec<String>,
         body: Box<Stmt>,
         location: Location,
-    }
+    },
 }
 
 pub trait Locatable {
@@ -66,14 +66,14 @@ pub trait Locatable {
 impl Locatable for Expr {
     fn location(&self) -> Location {
         match *self {
-            Expr::Nil { location, ..} => location,
-            Expr::Number { location, ..} => location,
-            Expr::Boolean { location, ..} => location,
-            Expr::String { location, ..} => location,
-            Expr::Unary { location, ..} => location,
-            Expr::Binary { location, ..} => location,
-            Expr::Var { location, ..} => location,
-            Expr::Assignment { location, ..} => location,
+            Expr::Nil { location, .. } => location,
+            Expr::Number { location, .. } => location,
+            Expr::Boolean { location, .. } => location,
+            Expr::String { location, .. } => location,
+            Expr::Unary { location, .. } => location,
+            Expr::Binary { location, .. } => location,
+            Expr::Var { location, .. } => location,
+            Expr::Assignment { location, .. } => location,
             Expr::Call { location, .. } => location,
             Expr::Fun { location, .. } => location,
         }

@@ -181,7 +181,12 @@ pub fn evaluate<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<V
             )))
         }
         ast::Expr::Call { callee, args, .. } => do_call(&callee, args, environment),
-        ast::Expr::Fun { params, body, location, .. } => {
+        ast::Expr::Fun {
+            params,
+            body,
+            location,
+            ..
+        } => {
             let closure = environment.clone();
             Ok(Value::LoxFunction {
                 name: format!("<anon@{}>", location.start),
@@ -189,7 +194,7 @@ pub fn evaluate<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<V
                 params: params.to_vec(),
                 body: body.clone(),
             })
-        },
+        }
     }
 }
 
