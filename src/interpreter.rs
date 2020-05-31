@@ -45,9 +45,9 @@ fn interpret_statement<'s>(
             }),
             _ => Ok(()),
         },
-        VarDecl(i, e) => {
-            let value = evaluate(&e, environment)?;
-            environment.define(&i, value);
+        VarDecl { name, init, .. } => {
+            let value = evaluate(&init, environment)?;
+            environment.define(&name, value);
             Ok(())
         }
         FunDecl {

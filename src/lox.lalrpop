@@ -30,8 +30,18 @@ FunDecl: Stmt = {
 }
 
 VarDecl: Stmt = {
-    "var" <i:Identifier> "=" <e:Expr> ";" => Stmt::VarDecl(i.to_string(), e),
-    <s:@L> "var" <i:Identifier> <e:@L> ";" => Stmt::VarDecl(i.to_string(), Expr::Nil { location: location(s, e) }),
+    <s:@L> "var" <i:Identifier> "=" <init:Expr> <e:@L> ";" => Stmt::VarDecl {
+        name: i.to_string(),
+        init: init,
+        location: location(s, e)
+    },
+    <s:@L> "var" <i:Identifier> <e:@L> ";" => Stmt::VarDecl {
+        name: i.to_string(),
+        // TODO: Do we care that *we've* initialised it to nil, or that
+        // the user did it? That is: Option<Expr> or Expr::Nil as default?
+        init: Expr::Nil { location: location(s, e) },
+        location: location(s, e)
+    },
 }
 
 pub Statement = {
