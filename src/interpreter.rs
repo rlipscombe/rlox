@@ -1,13 +1,19 @@
-use crate::lox;
-use crate::environment::Environment;
-use crate::error::*;
-use crate::value::Value;
 use crate::ast;
 use crate::ast::Locatable;
+use crate::environment::Environment;
+use crate::error::*;
+use crate::lox;
+use crate::resolver;
+use crate::value::Value;
 
-pub fn interpret_source<'s>(source: &'s str, environment: &mut Environment) -> Result<(), Error<'s>> {
+pub fn interpret_source<'s>(
+    source: &'s str,
+    environment: &mut Environment,
+) -> Result<(), Error<'s>> {
     let parser = lox::ProgramParser::new();
-    let program = parser.parse(source).map_err(|e| Error::Parse(e))?;
+    let mut program = parser.parse(source).map_err(|e| Error::Parse(e))?;
+
+    resolver::resolve_locals(&mut program);
     interpret_statements(&program, environment)
 }
 
@@ -160,20 +166,36 @@ pub fn evaluate<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<V
                 evaluate(&right, environment)?,
             ),
         },
-        ast::Expr::Var { name, .. } => environment.get(&name).ok_or_else(|| {
-            Error::Runtime(RuntimeError::IdentifierNotFound {
-                name: name.into(),
-                location: expr.location(),
-            })
-        }),
-        ast::Expr::Assignment { name, rhs, .. } => {
-            let value = evaluate(&rhs, environment)?;
-            environment.assign(&name, value).or(Err(Error::Runtime(
-                RuntimeError::IdentifierNotFound {
+        ast::Expr::Var { name, distance, .. } => {
+            environment.get_at(&name, *distance).ok_or_else(|| {
+                Error::Runtime(RuntimeError::IdentifierNotFound {
                     name: name.into(),
                     location: expr.location(),
-                },
-            )))
+                })
+            })
+        }
+        ast::Expr::Assignment {
+            name,
+            distance,
+            rhs,
+            ..
+        } => {
+            let value = evaluate(&rhs, environment)?;
+            match *distance {
+                Some(distance) => {
+                    environment
+                        .assign_at(&name, distance, value)
+                        .or(Err(Error::Runtime(RuntimeError::IdentifierNotFound {
+                            name: name.into(),
+                            location: expr.location(),
+                        })))
+                }
+                None => Err(Error::Internal {
+                    file: file!(),
+                    line: line!(),
+                    location: expr.location(),
+                }),
+            }
         }
         ast::Expr::Call { callee, args, .. } => do_call(&callee, args, environment),
         ast::Expr::Fun {

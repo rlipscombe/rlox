@@ -4,6 +4,7 @@ lalrpop_mod!(pub lox);
 
 mod ast;
 mod environment;
+mod resolver;
 mod interpreter;
 mod bindings;
 mod error;

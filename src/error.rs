@@ -2,8 +2,8 @@ use codespan_reporting::diagnostic::{Diagnostic, Label};
 use codespan_reporting::files::SimpleFiles;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 
-use crate::lox;
 use crate::ast;
+use crate::lox;
 use crate::Value;
 
 type ParseError<'s> = lalrpop_util::ParseError<usize, lox::Token<'s>, &'s str>;
@@ -12,6 +12,7 @@ type ParseError<'s> = lalrpop_util::ParseError<usize, lox::Token<'s>, &'s str>;
 pub enum Error<'s> {
     Parse(ParseError<'s>),
     Runtime(RuntimeError),
+    Internal { file: &'static str, line: u32, location: ast::Location },
     Assert { location: ast::Location },
     Return(Value),
 }
@@ -67,10 +68,13 @@ pub fn report_error(path: &str, source: &str, e: Error) {
                 expected, actual
             ))
             .with_labels(vec![Label::primary(file_id, location)]),
+        Error::Internal { file, line, location } => Diagnostic::error()
+            .with_message(format!("INTERNAL ERROR {}:{}", file, line))
+            .with_labels(vec![Label::primary(file_id, location)]),
         Error::Assert { location } => Diagnostic::error()
             .with_message("assertion failed")
             .with_labels(vec![Label::primary(file_id, location)]),
-        Error::Return(_) => panic!("using error for return values was a bad idea?")
+        Error::Return(_) => panic!("using error for return values was a bad idea?"),
     };
 
     let writer = StandardStream::stderr(ColorChoice::Auto);

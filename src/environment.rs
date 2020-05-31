@@ -12,6 +12,7 @@ struct Scope {
 
 #[derive(Clone)]
 pub struct Environment {
+    globals: Rc<RefCell<Scope>>,
     scope: Rc<RefCell<Scope>>,
 }
 
@@ -73,14 +74,16 @@ impl Scope {
 }
 
 impl Environment {
-    pub fn new() -> Self {
+    pub fn new(globals: Rc<RefCell<Scope>>) -> Self {
         Self {
+            globals: globals,
             scope: Scope::new(),
         }
     }
 
     pub fn with_enclosing(enclosing: &Environment) -> Self {
         Self {
+            globals: enclosing.globals.clone(),
             scope: Scope::with_enclosing(enclosing.clone()),
         }
     }
@@ -95,6 +98,19 @@ impl Environment {
 
     pub fn get(&self, name: &str) -> Option<Value> {
         self.scope.borrow().get(name)
+    }
+
+    pub fn get_at(&self, name: &str, distance: Option<usize>) -> Option<Value> {
+        match distance {
+            None => self.globals.borrow().get(name),
+            //self.scope.borrow().get(name)
+            _ => todo!(),
+        }
+    }
+
+    pub fn assign_at(&mut self, name: &str, distance: usize, value: Value) -> Result<Value, ()> {
+        todo!()
+        //self.scope.borrow_mut().assign(name, value)
     }
 }
 

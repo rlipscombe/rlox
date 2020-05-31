@@ -40,10 +40,12 @@ pub enum Expr {
     },
     Var {
         name: String,
+        distance: Option<usize>,
         location: Location,
     },
     Assignment {
         name: String,
+        distance: Option<usize>,
         rhs: Box<Expr>,
         location: Location,
     },

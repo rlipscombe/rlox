@@ -115,6 +115,7 @@ pub Expr = Assignment;
 Assignment: Expr = {
     <s:@L> <i:Identifier> <e:@L> "=" <a:Assignment> => Expr::Assignment {
         name: i.to_string(),
+        distance: None,
         rhs: Box::new(a),
         location: location(s, e)
     },
@@ -183,6 +184,7 @@ Term: Expr = {
     },
     <s:@L> <i:Identifier> <e:@L> => Expr::Var {
         name: i.to_string(),
+        distance: None,
         location: location(s, e)
     },
 };

@@ -47,3 +47,5 @@ var a = "global";
   var a = "block";
   showA();
 }
+// ...this should print "global" twice, because lexical scoping should
+// cause showA to bind to the global scope.
