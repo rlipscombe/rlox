@@ -67,16 +67,11 @@ fn interpret_statement<'s>(
             let result = interpret_statements(statements, environment);
             result
         }
-        Return(expr) => {
+        Return { expr, .. } => {
             // TODO: I'm uneasy about using Result for this; it feels like we need
             // something specific to this use.
-            match expr {
-                Some(expr) => {
-                    let value = evaluate(expr, environment)?;
-                    Err(Error::Return(value))
-                }
-                None => Err(Error::Return(Value::Nil)),
-            }
+            let value = evaluate(expr, environment)?;
+            Err(Error::Return(value))
         }
         If { cond, then, else_ } => match evaluate(&cond, environment) {
             Ok(Value::Boolean(true)) => interpret_statement(then, environment),
