@@ -33,17 +33,3 @@ fun quux() {
 }
 
 quux();  // "global a3" -- is this what we want?
-
-print "=====";
-
-// from 11.1
-var a = "global";
-{
-  fun showA() {
-    print a;
-  }
-
-  showA();
-  var a = "block";
-  showA();
-}

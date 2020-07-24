@@ -14,6 +14,6 @@ var sum = fun(x, a) { return x + a; };
 print aggregate(1, 5, sum); // 15
 
 // Functions are printable
-print aggregate;
-print sum;
-print mul;
+print aggregate;    // <fun aggregate (lox)>
+print sum;          // <fun <anon@236> (lox)>
+print mul;          // <fun mul (lox)>

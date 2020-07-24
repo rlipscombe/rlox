@@ -1,0 +1,10 @@
+var x = "global";
+
+fun gimme() {
+  return fun() {
+    print x;
+  };
+}
+
+var x = "another";
+gimme()();  // BUG: prints 'another'; should print 'global'.

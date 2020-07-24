@@ -1,0 +1,6 @@
+fun showC() {
+  print c;
+}
+
+var c = "cccc";
+showC();    // is the behaviour different for globals?

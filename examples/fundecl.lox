@@ -2,5 +2,7 @@ fun greet() {
     print "Hello World!";
 }
 
+// Functions are printable.
 print greet;
+// Functions are callable.
 greet();

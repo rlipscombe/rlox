@@ -1,0 +1,11 @@
+// from 11.1
+var a = "global";
+{
+  fun showA() {
+    print a;  // should bind to global 'a'.
+  }
+
+  showA();
+  var a = "block";
+  showA();    // should show "global", because "var a = ..." should have created a new environment.
+}

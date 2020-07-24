@@ -1,0 +1,22 @@
+var y = "global";
+
+fun quux() {
+    return fun() {
+        print y;
+    };
+}
+
+var q = quux();
+q();    // expect: global
+
+{
+    var y = "nested";
+    q();    // expect: global
+}
+
+fun pootle() {
+  var y = "pootle";
+  q();
+}
+
+pootle();   // expect: global

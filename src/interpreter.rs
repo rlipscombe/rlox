@@ -53,6 +53,11 @@ fn interpret_statement<'s>(
         FunDecl {
             name, params, body, ..
         } => {
+            // BUG: Because 'clone' merely clones the Rc, we end up with
+            // another reference to the same environment. Which means that
+            // when we declare a new variable in it...
+            // If we'd nested it slightly more, we'd have an enclosed environment
+            // and that would have done the right thing. I think.
             let closure = environment.clone();
             let callable = Value::LoxFunction {
                 name: name.to_string(),
@@ -64,7 +69,10 @@ fn interpret_statement<'s>(
             Ok(())
         }
         Block(statements) => {
-            let result = interpret_statements(statements, environment);
+            // This should create a new environment, so that 'var' is scoped correctly.
+            // But: does that break anything because we use Block for a few other things?
+            let mut environment = Environment::with_enclosing(environment);
+            let result = interpret_statements(statements, &mut environment);
             result
         }
         Return { expr, .. } => {
@@ -292,7 +300,11 @@ fn do_call<'s>(
 ) -> Result<Value, Error<'s>> {
     // The Java reference implementation of Lox evaluates the callee,
     // then the arguments, and _then_ checks that the callee is actually
-    // callable.
+    // callable. This could be important, since evaluating the callee and the
+    // arguments might have side-effects. As it turns out, I don't think it
+    // _is_ important, since calling a non-callable would be a runtime error
+    // and that actually aborts the program, and we don't have any externally-visible
+    // side-effects (other than print, so /shrug)
     let callable = evaluate(callee, environment)?;
     let mut argv = Vec::with_capacity(args.len());
     for a in args {

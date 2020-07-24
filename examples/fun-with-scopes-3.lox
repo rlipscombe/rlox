@@ -1,0 +1,9 @@
+// Related
+{
+  fun showB() {
+    print b;
+  }
+
+  var b = "bbbb";
+  showB();    // should be an error, since 'b' wasn't in scope at the time.
+}
