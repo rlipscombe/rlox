@@ -2,8 +2,8 @@ use codespan_reporting::diagnostic::{Diagnostic, Label};
 use codespan_reporting::files::SimpleFiles;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 
-use crate::lox;
 use crate::ast;
+use crate::lox;
 use crate::Value;
 
 type ParseError<'s> = lalrpop_util::ParseError<usize, lox::Token<'s>, &'s str>;
@@ -70,7 +70,7 @@ pub fn report_error(path: &str, source: &str, e: Error) {
         Error::Assert { location } => Diagnostic::error()
             .with_message("assertion failed")
             .with_labels(vec![Label::primary(file_id, location)]),
-        Error::Return(_) => panic!("using error for return values was a bad idea?")
+        Error::Return(_) => panic!("using error for return values was a bad idea?"),
     };
 
     let writer = StandardStream::stderr(ColorChoice::Auto);
