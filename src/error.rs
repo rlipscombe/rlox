@@ -18,7 +18,9 @@ pub enum Error<'s> {
 
 #[derive(Debug, PartialEq)]
 pub enum RuntimeError {
-    TypeMismatch,
+    TypeMismatch {
+        location: ast::Location,
+    },
     IdentifierNotFound {
         name: String,
         location: ast::Location,
@@ -51,9 +53,9 @@ pub fn report_error(path: &str, source: &str, e: Error) {
         Error::Runtime(RuntimeError::IdentifierNotFound { name, location }) => Diagnostic::error()
             .with_message(format!("identifier '{}' not found", name))
             .with_labels(vec![Label::primary(file_id, location)]),
-        Error::Runtime(RuntimeError::TypeMismatch) => {
-            Diagnostic::error().with_message("type mismatch")
-        }
+        Error::Runtime(RuntimeError::TypeMismatch { location }) => Diagnostic::error()
+            .with_message("type mismatch")
+            .with_labels(vec![Label::primary(file_id, location)]),
         Error::Runtime(RuntimeError::NotCallable { location }) => Diagnostic::error()
             .with_message("not callable")
             .with_labels(vec![Label::primary(file_id, location)]),

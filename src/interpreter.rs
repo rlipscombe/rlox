@@ -84,7 +84,7 @@ fn interpret_statement<'s>(
         If { cond, then, else_ } => match evaluate(&cond, environment) {
             Ok(Value::Boolean(true)) => interpret_statement(then, environment),
             Ok(Value::Boolean(false)) => interpret_statement(else_, environment),
-            Ok(_) => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+            Ok(_) => Err(Error::Runtime(RuntimeError::TypeMismatch { location: cond.location() })),
             Err(e) => Err(e),
         },
         While { cond, body } => loop {
@@ -96,7 +96,7 @@ fn interpret_statement<'s>(
                     return Ok(());
                 }
                 Ok(_) => {
-                    return Err(Error::Runtime(RuntimeError::TypeMismatch));
+                    return Err(Error::Runtime(RuntimeError::TypeMismatch { location: cond.location() }));
                 }
                 Err(e) => return Err(e),
             }
@@ -113,60 +113,27 @@ pub fn evaluate<'s>(expr: &ast::Expr, environment: &mut Environment) -> Result<V
         ast::Expr::Unary { op, right, .. } => match op {
             ast::UnaryOp::Invert => match evaluate(&right, environment)? {
                 Value::Boolean(b) => Ok(Value::Boolean(!b)),
-                _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+                _ => Err(Error::Runtime(RuntimeError::TypeMismatch { location: right.location() })),
             },
             ast::UnaryOp::Negate => match evaluate(&right, environment)? {
                 Value::Number(n) => Ok(Value::Number(-n)),
-                _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+                _ => Err(Error::Runtime(RuntimeError::TypeMismatch { location: right.location() })),
             },
         },
         ast::Expr::Binary {
             left, op, right, ..
         } => match op {
-            ast::BinaryOp::Add => do_add(
-                evaluate(&left, environment)?,
-                evaluate(&right, environment)?,
-            ),
-            ast::BinaryOp::Sub => do_sub(
-                evaluate(&left, environment)?,
-                evaluate(&right, environment)?,
-            ),
-            ast::BinaryOp::Mul => do_mul(
-                evaluate(&left, environment)?,
-                evaluate(&right, environment)?,
-            ),
-            ast::BinaryOp::Div => do_div(
-                evaluate(&left, environment)?,
-                evaluate(&right, environment)?,
-            ),
-            ast::BinaryOp::Mod => do_mod(
-                evaluate(&left, environment)?,
-                evaluate(&right, environment)?,
-            ),
-            ast::BinaryOp::Eq => do_eq(
-                evaluate(&left, environment)?,
-                evaluate(&right, environment)?,
-            ),
-            ast::BinaryOp::Ne => do_ne(
-                evaluate(&left, environment)?,
-                evaluate(&right, environment)?,
-            ),
-            ast::BinaryOp::Lt => do_lt(
-                evaluate(&left, environment)?,
-                evaluate(&right, environment)?,
-            ),
-            ast::BinaryOp::Le => do_le(
-                evaluate(&left, environment)?,
-                evaluate(&right, environment)?,
-            ),
-            ast::BinaryOp::Gt => do_gt(
-                evaluate(&left, environment)?,
-                evaluate(&right, environment)?,
-            ),
-            ast::BinaryOp::Ge => do_ge(
-                evaluate(&left, environment)?,
-                evaluate(&right, environment)?,
-            ),
+            ast::BinaryOp::Add => do_add(&left, &right, environment),
+            ast::BinaryOp::Sub => do_sub(&left, &right, environment),
+            ast::BinaryOp::Mul => do_mul(&left, &right, environment),
+            ast::BinaryOp::Div => do_div(&left, &right, environment),
+            ast::BinaryOp::Mod => do_mod(&left, &right, environment),
+            ast::BinaryOp::Eq => do_eq(&left, &right, environment),
+            ast::BinaryOp::Ne => do_ne(&left, &right, environment),
+            ast::BinaryOp::Lt => do_lt(&left, &right, environment),
+            ast::BinaryOp::Le => do_le(&left, &right, environment),
+            ast::BinaryOp::Gt => do_gt(&left, &right, environment),
+            ast::BinaryOp::Ge => do_ge(&left, &right, environment),
         },
         ast::Expr::Var { name, .. } => environment.get(&name).ok_or_else(|| {
             Error::Runtime(RuntimeError::IdentifierNotFound {
@@ -213,87 +180,111 @@ fn do_print(e: Value) {
     }
 }
 
-fn do_add<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
-    match (lhs, rhs) {
+fn do_add<'s>(lhs: &ast::Expr, rhs: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let lv = evaluate(lhs, environment)?;
+    let rv = evaluate(rhs, environment)?;
+    match (lv, rv) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
         (Value::String(l), Value::String(r)) => Ok(Value::String(l + &r)),
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch { location: rhs.location() })),
     }
 }
 
-fn do_sub<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
-    match (lhs, rhs) {
+fn do_sub<'s>(lhs: &ast::Expr, rhs: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let lv = evaluate(lhs, environment)?;
+    let rv = evaluate(rhs, environment)?;
+    match (lv, rv) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l - r)),
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch { location: rhs.location() })),
     }
 }
 
-fn do_mul<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
-    match (lhs, rhs) {
+fn do_mul<'s>(lhs: &ast::Expr, rhs: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let lv = evaluate(lhs, environment)?;
+    let rv = evaluate(rhs, environment)?;
+    match (lv, rv) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l * r)),
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch { location: rhs.location() })),
     }
 }
 
-fn do_div<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
-    match (lhs, rhs) {
+fn do_div<'s>(lhs: &ast::Expr, rhs: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let lv = evaluate(lhs, environment)?;
+    let rv = evaluate(rhs, environment)?;
+    match (lv, rv) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l / r)),
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch { location: rhs.location() })),
     }
 }
 
-fn do_mod<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
-    match (lhs, rhs) {
+fn do_mod<'s>(lhs: &ast::Expr, rhs: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let lv = evaluate(lhs, environment)?;
+    let rv = evaluate(rhs, environment)?;
+    match (lv, rv) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l % r)),
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch { location: rhs.location() })),
     }
 }
 
-fn do_eq<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
-    match (lhs, rhs) {
+fn do_eq<'s>(lhs: &ast::Expr, rhs: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let lv = evaluate(lhs, environment)?;
+    let rv = evaluate(rhs, environment)?;
+    match (lv, rv) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l == r)),
         (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l == r)),
         (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l == r)),
         (Value::Nil, Value::Nil) => Ok(Value::Boolean(true)),
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+        // Types don't match => false
+        _ => Ok(Value::Boolean(false)),
     }
 }
 
-fn do_ne<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
-    match (lhs, rhs) {
+fn do_ne<'s>(lhs: &ast::Expr, rhs: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let lv = evaluate(lhs, environment)?;
+    let rv = evaluate(rhs, environment)?;
+    match (lv, rv) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l != r)),
         (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l != r)),
         (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l != r)),
         (Value::Nil, Value::Nil) => Ok(Value::Boolean(false)),
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+        // Types don't match => true
+        _ => Ok(Value::Boolean(true)),
     }
 }
 
-fn do_lt<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
-    match (lhs, rhs) {
+fn do_lt<'s>(lhs: &ast::Expr, rhs: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let lv = evaluate(lhs, environment)?;
+    let rv = evaluate(rhs, environment)?;
+    match (lv, rv) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l < r)),
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch { location: rhs.location() })),
     }
 }
 
-fn do_le<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
-    match (lhs, rhs) {
+fn do_le<'s>(lhs: &ast::Expr, rhs: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let lv = evaluate(lhs, environment)?;
+    let rv = evaluate(rhs, environment)?;
+    match (lv, rv) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l <= r)),
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch { location: rhs.location() })),
     }
 }
 
-fn do_gt<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
-    match (lhs, rhs) {
+fn do_gt<'s>(lhs: &ast::Expr, rhs: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let lv = evaluate(lhs, environment)?;
+    let rv = evaluate(rhs, environment)?;
+    match (lv, rv) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l > r)),
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch { location: rhs.location() })),
     }
 }
 
-fn do_ge<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
-    match (lhs, rhs) {
+fn do_ge<'s>(lhs: &ast::Expr, rhs: &ast::Expr, environment: &mut Environment) -> Result<Value, Error<'s>> {
+    let lv = evaluate(lhs, environment)?;
+    let rv = evaluate(rhs, environment)?;
+    match (lv, rv) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l >= r)),
-        _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
+        _ => Err(Error::Runtime(RuntimeError::TypeMismatch { location: rhs.location() })),
     }
 }
 
