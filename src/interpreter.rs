@@ -253,6 +253,7 @@ fn do_eq<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l == r)),
         (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l == r)),
+        (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l == r)),
         (Value::Nil, Value::Nil) => Ok(Value::Boolean(true)),
         _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
@@ -261,6 +262,9 @@ fn do_eq<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
 fn do_ne<'s>(lhs: Value, rhs: Value) -> Result<Value, Error<'s>> {
     match (lhs, rhs) {
         (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l != r)),
+        (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l != r)),
+        (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l != r)),
+        (Value::Nil, Value::Nil) => Ok(Value::Boolean(false)),
         _ => Err(Error::Runtime(RuntimeError::TypeMismatch)),
     }
 }
