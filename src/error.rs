@@ -35,7 +35,25 @@ pub enum RuntimeError {
     },
 }
 
-pub fn report_error(path: &str, source: &str, e: Error) {
+pub fn report_error(path: &str, source: &str, simple_errors: bool, e: Error) {
+    if simple_errors {
+        report_simple_error(e);
+    } else {
+        report_detailed_error(path, source, e);
+    }
+}
+
+fn report_simple_error(e: Error) {
+    match e {
+        Error::Runtime(RuntimeError::TypeMismatch { .. }) => {
+            println!("runtime error: Type mismatch")
+        }
+        Error::Runtime(_) => println!("runtime error"),
+        _ => println!("error"),
+    }
+}
+
+fn report_detailed_error(path: &str, source: &str, e: Error) {
     let mut files = SimpleFiles::new();
     let file_id = files.add(path, source);
     let diagnostic = match e {

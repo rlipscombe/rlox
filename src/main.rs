@@ -20,6 +20,9 @@ use clap::Clap;
 #[derive(Clap)]
 struct Opts {
     input: String,
+
+    #[clap(long)]
+    simple_errors: bool,
 }
 
 fn main() {
@@ -31,6 +34,6 @@ fn main() {
     bindings::register_globals(&mut environment);
     match interpret_source(&source, &mut environment) {
         Ok(_) => {}
-        Err(e) => error::report_error(&opts.input, &source, e),
+        Err(e) => error::report_error(&opts.input, &source, opts.simple_errors, e),
     };
 }
