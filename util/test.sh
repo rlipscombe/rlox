@@ -8,4 +8,4 @@ expected=$( perl -ne '/\/\/ expect: (.*)/ && print $1 . "\n"' < $lox )
 actual=$( cargo run --quiet $lox 2>&1 )
 
 # Compare the expected output to the actual output
-colordiff -u <(echo "$expected") <(echo "$actual")
+colordiff --label "$lox" -u <(echo "$expected") <(echo "$actual")
