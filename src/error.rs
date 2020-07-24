@@ -45,11 +45,14 @@ pub fn report_error(path: &str, source: &str, simple_errors: bool, e: Error) {
 
 fn report_simple_error(e: Error) {
     match e {
+        Error::Parse(ParseError::UnrecognizedToken { expected, .. }) => {
+            println!("parse error: unrecognized token; {}", expected_one_of(expected).join(", "));
+        },
         Error::Runtime(RuntimeError::TypeMismatch { .. }) => {
             println!("runtime error: Type mismatch")
         }
         Error::Runtime(_) => println!("runtime error"),
-        _ => println!("error"),
+        _ => println!("{:?}", e),
     }
 }
 
