@@ -36,27 +36,6 @@ pub enum RuntimeError {
 }
 
 pub fn report_error(path: &str, source: &str, simple_errors: bool, e: Error) {
-    if simple_errors {
-        report_simple_error(e);
-    } else {
-        report_detailed_error(path, source, e);
-    }
-}
-
-fn report_simple_error(e: Error) {
-    match e {
-        Error::Parse(ParseError::UnrecognizedToken { expected, .. }) => {
-            println!("parse error: unrecognized token; {}", expected_one_of(expected).join(", "));
-        },
-        Error::Runtime(RuntimeError::TypeMismatch { .. }) => {
-            println!("runtime error: Type mismatch")
-        }
-        Error::Runtime(_) => println!("runtime error"),
-        _ => println!("{:?}", e),
-    }
-}
-
-fn report_detailed_error(path: &str, source: &str, e: Error) {
     let mut files = SimpleFiles::new();
     let file_id = files.add(path, source);
     let diagnostic = match e {
@@ -97,7 +76,10 @@ fn report_detailed_error(path: &str, source: &str, e: Error) {
     };
 
     let writer = StandardStream::stderr(ColorChoice::Auto);
-    let config = codespan_reporting::term::Config::default();
+    let mut config = codespan_reporting::term::Config::default();
+    if simple_errors {
+        config.display_style = codespan_reporting::term::DisplayStyle::Short;
+    }
     let _ = codespan_reporting::term::emit(&mut writer.lock(), &config, &files, &diagnostic);
 }
 
