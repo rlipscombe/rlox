@@ -1,0 +1,12 @@
+fun outer() {
+    var x = 0;
+    return fun() { x = x + 1; return x; };
+}
+
+var f = outer();
+var g = outer();
+
+print f();  // expect: 1
+print g();  // expect: 1
+print f();  // expect: 2
+print g();  // expect: 2
