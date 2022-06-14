@@ -15,13 +15,14 @@ use environment::Environment;
 use interpreter::interpret_source;
 use value::Value;
 
-use clap::Clap;
+use clap::Parser;
 
-#[derive(Clap)]
+#[derive(Parser)]
 struct Opts {
+    #[clap(value_parser)]
     input: String,
 
-    #[clap(long)]
+    #[clap(long, action)]
     simple_errors: bool,
 }
 
