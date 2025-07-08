@@ -37,8 +37,8 @@ VarDecl: Stmt = {
     },
     <s:@L> "var" <i:Identifier> <e:@L> ";" => Stmt::VarDecl {
         name: i.to_string(),
-        // TODO: Do we care that *we've* initialised it to nil, or that
-        // the user did it? That is: Option<Expr> or Expr::Nil as default?
+        // TODO: Do we care that *we've* initialised it to nil, or that the user did it?
+        // That is: Option<Expr> (there was no expression) or Expr::Nil (explicitly nil) as default?
         init: Expr::Nil { location: location(s, e) },
         location: location(s, e)
     },
